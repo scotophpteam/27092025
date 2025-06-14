@@ -1,0 +1,26 @@
+{
+  // Global format on save
+  "editor.formatOnSave": true,
+
+  // Set Prettier as the default formatter for HTML, CSS, JS
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // Enable format on save for specific languages
+  "[html]": {
+    "editor.formatOnSave": true
+  },
+  "[css]": {
+    "editor.formatOnSave": true
+  },
+  "[javascript]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "vscode.typescript-language-features"
+  },
+  "[php]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "bmewburn.vscode-intelephense-client"
+  },
+
+  // Optional: Enable Prettier for JSON files
+  "json.format.enable": true
+}

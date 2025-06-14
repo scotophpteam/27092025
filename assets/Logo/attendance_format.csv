@@ -1,0 +1,2 @@
+Institution,Education_Level,Batch,Class,Section,Gender,Student_Id,Admission_No,RollNo,Shift,Active_Time,In_Active_Time,Total_Present,Total_Absent,Total_WeekDays,Total_WeekEnd,Percentage,Status,Mobile,CreatedBy,CreatedTime,UpdatedBy,UpdatedTime,Attendance_Status,Attendance_StartingTime,Attendance_EndingTime,Attendance_Date,Attendance_Status_1
+"ANNAIVEILANKANNIS SCHOOL",I-V,2024-2025,IA,1009173,V,"SAMYUKTHA SRI","October 2024",II,NULL,NULL,00274,0,5,0,0,0,Active,9566491228,SCOT,"2024-10-30 06:20:29",,,Active,"1:30 PM","07:00 PM",2024-10-30,Absent
