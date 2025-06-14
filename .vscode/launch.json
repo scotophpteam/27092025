@@ -5,24 +5,55 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "address": "TCP/IP address of process to be debugged",
+            "localRoot": "${workspaceFolder}",
+            "name": "Attach to Remote",
+            "port": 9229,
+            "remoteRoot": "Absolute path to the remote directory containing the program",
+            "request": "attach",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node"
+        },
+        {
+            "name": "Attach by Process ID",
+            "processId": "${command:PickProcess}",
+            "request": "attach",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node"
+        },
+        {
+            "name": "Attach to Chrome",
+            "port": 9222,
+            "request": "attach",
+            "type": "chrome",
+            "webRoot": "${workspaceFolder}"
+        },
+
+
+
+        {
             "name": "Launch Chrome",
             "request": "launch",
             "type": "chrome",
-            "url": "http://localhost:8080",
+            "url": "http://localhost/Precot",
             "webRoot": "${workspaceFolder}"
         },
         {
             "name": "Launch Chrome",
             "request": "launch",
             "type": "chrome",
-            "url": "http://localhost:8080",
+            "url": "http://localhost/Precot/Precot",
             "webRoot": "${workspaceFolder}"
         },
         {
             "name": "Launch Chrome",
             "request": "launch",
             "type": "chrome",
-            "url": "http://localhost:8080",
+            "url": "http://localhost/Precot",
             "webRoot": "${workspaceFolder}"
         },
         {
@@ -67,8 +98,8 @@
             "cwd": "${workspaceRoot}",
             "port": 9003,
             "serverReadyAction": {
-                "pattern": "Development Server \\(http://localhost:([0-9]+)\\) started",
-                "uriFormat": "http://localhost:%s",
+                "pattern": "Development Server \\(http://localhost/Precot:([0-9]+)\\) started",
+                "uriFormat": "http://localhost/Precot:%s",
                 "action": "openExternally"
             }
         }
