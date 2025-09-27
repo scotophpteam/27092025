@@ -33,6 +33,7 @@
                                     <option value="Super Admin">Super Admin</option>
                                     <option value="Manager">Admin</option>
                                     <option value="HR">Supervisor</option>
+                                     <option value="HRL">HRL</option>
                                 </select>
                                 <span class="text-danger"><?php echo form_error('Users'); ?></span>
                             </div>
@@ -60,10 +61,10 @@
                                         <th>Screen</th>
                                         <th>Edit</th>
                                         <th>Delete</th>
+                                         <!-- <th>URL</th> -->
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <!-- Rows dynamically populated -->
                                 </tbody>
                             </table>
                         </div>

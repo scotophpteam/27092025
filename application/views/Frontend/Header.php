@@ -99,7 +99,7 @@
                         </select>
                         <input type="hidden" id="Ccode" value="PRECOT">
                     </div>
-                    <button type="button" class="btn btn-warning btn-sm mr-3" id="Update_Location">Update</button>
+                    <button type="button" class="btn btn-warning btn-sm mr-3" id="Update_Location" style="padding: 10px;">Update</button>
                 <?php } ?>
             <?php } ?>
 

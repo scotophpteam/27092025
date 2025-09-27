@@ -30,6 +30,7 @@ class Reports extends CI_Controller
         $this->load->model('Employee_Model');
         $this->load->model('Grade_Model');
         $this->load->model('OT_Model');
+        $this->load->model('Incentive_Model');
     }
 
     public function Work_Allocation()
@@ -2408,17 +2409,17 @@ public function OT_Employee_List_Report_Download()
                 ],
             ]);
 
-            $sheet->setCellValue('A6', 'Ccode')
-                ->setCellValue('B6', 'Lcode')
-                ->setCellValue('C6', 'Sub Department')
-                ->setCellValue('D6', 'Position')
-                ->setCellValue('E6', 'EmpNo')
-                ->setCellValue('F6', 'First Name')
-                ->setCellValue('G6', 'Previous Shift')
-                ->setCellValue('H6', 'Frame')
-                ->setCellValue('I6', 'Machine_Id');
+            $sheet->setCellValue('A2', 'Ccode')
+                ->setCellValue('B2', 'Lcode')
+                ->setCellValue('C2', 'Sub Department')
+                ->setCellValue('D2', 'Position')
+                ->setCellValue('E2', 'EmpNo')
+                ->setCellValue('F2', 'First Name')
+                ->setCellValue('G2', 'Previous Shift')
+                ->setCellValue('H2', 'Frame')
+                ->setCellValue('I2', 'Machine_Id');
                 
-            $sheet->getStyle('A6:I6')->applyFromArray([
+            $sheet->getStyle('A2:I2')->applyFromArray([
                 'font' => [
                     'bold' => true,
                     'size' => 10,
@@ -2470,5 +2471,238 @@ public function OT_Employee_List_Report_Download()
         redirect(base_url(), 'refresh');
     }
 }
+
+
+public function Employee_Position_Overal_Report_Down()
+{
+    $Session = $this->session->userdata('sess_array');
+    if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+
+        $LocationCode = $Session['Lcode'];
+        $CompanyCode = $Session['Ccode'];
+        $Login_User = $Session['UserName'];
+        $UserRole =  $Session['UserType'];
+
+        $From_Date = $this->input->post('From_Date'); // e.g., 2025-09-01
+        $To_Date = $this->input->post('To_Date');     // e.g., 2025-09-30
+        $Employee_Id = $this->input->post('Employee_Id');
+
+        // Get employee data
+        $this->data['Employee_Position_Details'] = $Employee_Position_Details = $this->Incentive_Model->Employee_Position_Details($CompanyCode, $LocationCode, $Login_User,$UserRole, $From_Date, $To_Date, $Employee_Id);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Title
+        $mainHeading = 'Employee Position Report';
+        $sheet->mergeCells('A1:Z1');
+        $sheet->setCellValue('A1', $mainHeading);
+        $sheet->getStyle('A1')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 16],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+        $sheet->getRowDimension('1')->setRowHeight(30);
+
+        // Header Row
+        $headerRow = 2;
+        $col = 'A';
+
+        $staticHeaders = ['EmpNo', 'FirstName', 'A', 'B', 'C', 'Total'];
+        foreach ($staticHeaders as $header) {
+            $sheet->setCellValue($col . $headerRow, $header);
+            $col++;
+        }
+
+        // Save start column after static headers
+        $dateStartCol = $col;
+
+        // Add actual date headers (e.g., 01-09-2025 to 30-09-2025)
+        $currentDate = strtotime($From_Date);
+        $endDate = strtotime($To_Date);
+        $dateHeaders = []; // holds ['formatted_date' => 'DAY-n']
+
+        $dayNumber = 1;
+        while ($currentDate <= $endDate) {
+            $formattedDate = date('d-m-Y', $currentDate); // e.g., 01-09-2025
+            $dayKey = 'DAY-' . $dayNumber;
+
+            $sheet->setCellValue($col . $headerRow, $formattedDate);
+            $dateHeaders[$formattedDate] = $dayKey;
+
+            $col++;
+            $currentDate = strtotime('+1 day', $currentDate);
+            $dayNumber++;
+        }
+
+        // Get last used column for styling/autosize
+        $lastColIndex = ord('A') + count($staticHeaders) + count($dateHeaders) - 1;
+        $lastCol = chr($lastColIndex);
+
+        // Style header
+        $sheet->getStyle("A{$headerRow}:{$lastCol}{$headerRow}")->applyFromArray([
+            'font' => ['bold' => true, 'size' => 10],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                ],
+            ],
+        ]);
+
+        // Fill data rows
+        $rowNumber = $headerRow + 1;
+        foreach ($Employee_Position_Details as $data) {
+            $col = 'A';
+            $sheet->setCellValue($col++ . $rowNumber, $data->EmpNo);
+            $sheet->setCellValue($col++ . $rowNumber, $data->FirstName);
+            $sheet->setCellValue($col++ . $rowNumber, $data->Total_A_Count);
+            $sheet->setCellValue($col++ . $rowNumber, $data->Total_B_Count);
+            $sheet->setCellValue($col++ . $rowNumber, $data->Total_C_Count);
+            $sheet->setCellValue($col++ . $rowNumber, $data->Grade_Day_Count);
+
+            // Insert each date value using 'DAY-n' keys
+            $dayIndex = 1;
+            foreach ($dateHeaders as $formattedDate => $dayKey) {
+                $sheet->setCellValue($col++ . $rowNumber, isset($data->$dayKey) ? $data->$dayKey : '');
+                $dayIndex++;
+            }
+
+            $rowNumber++;
+        }
+
+        // Autosize columns
+        foreach (range('A', $lastCol) as $columnID) {
+            $sheet->getColumnDimension($columnID)->setAutoSize(true);
+        }
+
+        // Save the file
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $currentDateString = date('Y-m-d');
+        $directory = 'assets/reports';
+
+        if (!is_dir($directory)) {
+            mkdir($directory, 0777, true);
+        }
+
+        $file_path = $directory . '/OT_Employee_List_' . $currentDateString . '.xlsx';
+        $writer->save($file_path);
+
+        echo json_encode(['file_url' => base_url($file_path)]);
+        exit;
+
+    } else {
+        redirect(base_url(), 'refresh');
+    }
+}
+
+
+public function Employee_Position_Short_Report_Down()
+{
+    $Session = $this->session->userdata('sess_array');
+    if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+
+        $LocationCode = $Session['Lcode'];
+        $CompanyCode = $Session['Ccode'];
+        $Login_User = $Session['UserName'];
+        $UserRole =  $Session['UserType'];
+
+        $From_Date = $this->input->post('From_Date'); // e.g., 2025-09-01
+        $To_Date = $this->input->post('To_Date');     // e.g., 2025-09-30
+        $Employee_Id = $this->input->post('Employee_Id');
+
+        // Fetch employee data
+        $this->data['Employee_Position_Details'] = $Employee_Position_Details = $this->Incentive_Model->Employee_Position_Details($CompanyCode, $LocationCode, $Login_User,$UserRole, $From_Date, $To_Date, $Employee_Id);
+
+        // Initialize spreadsheet
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Header row (starts at Row 1)
+        $headerRow = 1;
+        $col = 'A';
+
+        // Static headers
+        $staticHeaders = ['EmpNo', 'FirstName', 'A', 'B', 'C', 'Total'];
+        foreach ($staticHeaders as $header) {
+            $sheet->setCellValue($col . $headerRow, $header);
+            $col++;
+        }
+
+        // Add dynamic date headers (from From_Date to To_Date)
+        $currentDate = strtotime($From_Date);
+        $endDate = strtotime($To_Date);
+        $dateHeaders = [];
+
+        
+
+        // Last column for autosizing/styling
+        $lastCol = chr(ord('A') + count($staticHeaders) + count($dateHeaders) - 1);
+
+        // Style header row
+        $sheet->getStyle("A{$headerRow}:{$lastCol}{$headerRow}")->applyFromArray([
+            'font' => ['bold' => true],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                ],
+            ],
+        ]);
+
+        // Fill data rows
+        $rowNumber = $headerRow + 1;
+        foreach ($Employee_Position_Details as $data) {
+            $col = 'A';
+            $sheet->setCellValue($col++ . $rowNumber, $data->EmpNo);
+            $sheet->setCellValue($col++ . $rowNumber, $data->FirstName);
+            $sheet->setCellValue($col++ . $rowNumber, $data->Total_A_Count);
+            $sheet->setCellValue($col++ . $rowNumber, $data->Total_B_Count);
+            $sheet->setCellValue($col++ . $rowNumber, $data->Total_C_Count);
+            $sheet->setCellValue($col++ . $rowNumber, $data->Grade_Day_Count);
+
+           
+
+            $rowNumber++;
+        }
+
+        // Autosize all columns
+        foreach (range('A', $col) as $columnID) {
+            $sheet->getColumnDimension($columnID)->setAutoSize(true);
+        }
+
+        // Save the file
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $currentDateString = date('Ymd_His');
+        $directory = 'assets/reports';
+
+        if (!is_dir($directory)) {
+            mkdir($directory, 0777, true);
+        }
+
+        $filename = 'Employee_Position_Report_' . $currentDateString . '.xlsx';
+        $file_path = $directory . '/' . $filename;
+
+        $writer->save($file_path);
+
+        // Return file URL
+        echo json_encode(['file_url' => base_url($file_path)]);
+        exit;
+
+    } else {
+        redirect(base_url(), 'refresh');
+    }
+}
+
+
+
 
 }

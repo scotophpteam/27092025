@@ -1158,4 +1158,51 @@ public function Employee_Punching_List_Download_Login_Det($CompanyCode, $Locatio
             return 0;
         }
     }
+
+     public function Employee_Details($CompanyCode, $LocationCode, $Login_User, $UserRole){
+
+
+       if($UserRole == 'HRL'){
+
+        $Sql = "SELECT EmpNo,FirstName FROM Employee_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode'AND CatName = 'WORKER' AND IsActive = 'Yes'";
+
+        $Query = $this->db->query($Sql);
+
+        if($Query->num_rows() > 0){
+
+            return $Query->result();
+
+        }
+
+
+        } else {
+
+
+            $Sql = "SELECT Emp.EmpNo,Emp.FirstName FROM UserDetails_Det AS Supervisor INNER JOIN Employee_Mst As Emp 
+        ON Supervisor.Lcode = Emp.LocCode 
+        AND Supervisor.Ccode = Emp.CompCode 
+        AND Supervisor.Name = Emp.DeptName
+        WHERE Supervisor.Lcode = '$LocationCode'
+        AND Emp.CompCode = '$CompanyCode'
+        AND Supervisor.UserID = '$Login_User'
+        AND Emp.CatName = 'WORKER'
+        AND Emp.IsActive = 'Yes'";
+
+        $Query = $this->db->query($Sql);
+
+        if($Query->num_rows() > 0){
+
+            return $Query->result();
+
+        }
+
+
+    }
+}
+
+  
+
+
+
+
 }

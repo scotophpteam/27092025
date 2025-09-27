@@ -832,6 +832,122 @@ public function Standard_Edit_List(){
 
         }
 
+        public function Employee_Position_Map(){
+
+            $Session = $this->session->userdata('sess_array');
+            if (!empty($Session) && isset($Session['IsOnLogin']) &&  $Session['IsOnLogin'] === TRUE) {
+
+                $this->data['Favicon'] = 'Precot | Employee Position Mapping';
+
+                
+                $this->load->view('Frontend/Header', $this->data);
+                $this->load->view('Frontend/Sidebar');
+                $this->load->view('Master/Employee_Position_Mapping', $this->data);
+                $this->load->view('Frontend/Footer');
+
+
+            } else {
+                redirect(base_url(), 'refresh');
+            }
+
+
+
+        }
+
+        public function Emp_Department(){
+
+             $Session = $this->session->userdata('sess_array');
+            if (!empty($Session) && isset($Session['IsOnLogin']) &&  $Session['IsOnLogin'] === TRUE) {
+
+            $CompanyCode =  $Session['Ccode'];
+            $LocationCode =  $Session['Lcode'];
+            $Login_User =  $Session['UserName'];
+            $UserRole =  $Session['UserType'];
+
+            $this->data['Emp_Department'] = $Emp_Department = $this->Master_Model->Emp_Department($CompanyCode, $LocationCode, $Login_User, $UserRole);
+
+            if ($Emp_Department == 0) {
+
+                $Message =  [
+                    'Status' => 'Error',
+                    'Message' => 'Faild To Fatch Employee Department Details.'
+                ];
+
+                echo json_encode($this->data);
+            } else {
+
+                echo json_encode($this->data);
+            }
+        } else {
+            redirect(base_url());
+        }
+
+
+        }
+
+
+          public function Position_Details(){
+
+             $Session = $this->session->userdata('sess_array');
+            if (!empty($Session) && isset($Session['IsOnLogin']) &&  $Session['IsOnLogin'] === TRUE) {
+
+            $CompanyCode =  $Session['Ccode'];
+            $LocationCode =  $Session['Lcode'];
+            $Login_User =  $Session['UserName'];
+            $UserRole =  $Session['UserType'];
+
+            $Sub_Department = $this->input->post('Sub_Department');
+
+            $this->data['Position_Details'] = $Position_Details = $this->Master_Model->Position_Details($CompanyCode, $LocationCode, $Login_User, $UserRole, $Sub_Department);
+
+            if ($Position_Details == 0) {
+
+                $Message =  [
+                    'Status' => 'Error',
+                    'Message' => 'Faild To Fatch Employee Department Details.'
+                ];
+
+                echo json_encode($this->data);
+            } else {
+
+                echo json_encode($this->data);
+            }
+        } else {
+            redirect(base_url());
+        }
+
+
+        }
+
+
+        public function Save_Updated_Grades(){
+
+            $Session = $this->session->userdata('sess_array');
+            if (!empty($Session) && isset($Session['IsOnLogin']) &&  $Session['IsOnLogin'] === TRUE) {
+
+            $CompanyCode =  $Session['Ccode'];
+            $LocationCode =  $Session['Lcode'];
+            $Login_User =  $Session['UserName'];
+            $UserRole =  $Session['UserType'];
+
+             $json = file_get_contents('php://input');
+             $Response_Data = json_decode($json, true);
+
+             $UpdatedGrades = $Response_Data['UpdatedGrades'];
+
+            $this->data['Save_Updated_Grades'] = $Save_Updated_Grades = $this->Master_Model->Save_Updated_Grades($CompanyCode, $LocationCode, $Login_User, $UserRole, $UpdatedGrades);
+
+            echo json_encode($this->data);
+            
+        } else {
+
+            redirect(base_url());
+            
+        }
+
+
+        }
+
 
 
 }

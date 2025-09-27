@@ -26,7 +26,7 @@
                                 <select class="custom-select2 form-control" name="Shift" id="Sel_Shift">
                                 </select>
                             </div>
-                        </div>
+                        </div> &nbsp;&nbsp;
 
                         <!-- <div class="col-md-3">
                             <div class="form-group">
@@ -37,7 +37,7 @@
                             </div>
                         </div> -->
 
-                        <div class="col-md-4 d-flex gap-2" style="margin-bottom: 28px;">
+                        <div class="col-md-4 d-flex gap-2" style="margin-bottom: 25px;">
                             <button type="button" class="btn btn-info btn-sm" id="OT_Employee_Report_View">View</button>&nbsp;
                              <button type="button" class="btn btn-warning btn-sm" id="OT_Employee_Report_Down">Download</button> &nbsp;
                         </div>

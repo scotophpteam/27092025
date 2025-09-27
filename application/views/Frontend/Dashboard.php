@@ -124,7 +124,16 @@ if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] ==
                 </div>
 
             <?php
-        } else {
+        } else if($UserRole == 'HRL'){
+
+            
+
+        }
+        
+        
+        
+        
+        else {
             // Non-manager view
             ?>
 

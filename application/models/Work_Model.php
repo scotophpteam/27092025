@@ -1954,7 +1954,7 @@ class  Work_Model extends CI_Model
                         }
                     } else {
 
-                        if ($Sub_Department === 'Spinning-Prod' || $Sub_Department === 'Finishing-Prod' ||  $Sub_Department === 'Preparatory-Prod' || $Sub_Department == 'SPINNING-PROD' || $Sub_Department == 'FINISHING-PROD'  || $Sub_Department === 'PREPARATORY-PROD') {
+                        if ($Sub_Department === 'Spinning' || $Sub_Department === 'Finishing' ||  $Sub_Department === 'Preparatory' || $Sub_Department == 'SPINNING' || $Sub_Department == 'FINISHING'  || $Sub_Department === 'PREPARATORY') {
 
                             foreach ($Machine_Id as $index => $Machine_datas) {
 
@@ -3708,7 +3708,7 @@ class  Work_Model extends CI_Model
                         }
                     } else {
 
-                        if ($Sub_Department === 'Spinning-Prod' || $Sub_Department === 'Finishing-Prod' ||  $Sub_Department === 'Preparatory-Prod' || $Sub_Department == 'SPINNING-PROD' || $Sub_Department == 'FINISHING-PROD'  || $Sub_Department === 'PREPARATORY-PROD') {
+                        if ($Sub_Department === 'Spinning' || $Sub_Department === 'Finishing' ||  $Sub_Department === 'Preparatory' || $Sub_Department == 'SPINNING' || $Sub_Department == 'FINISHING'  || $Sub_Department === 'PREPARATORY') {
 
 
                             $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";

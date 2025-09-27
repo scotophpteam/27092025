@@ -123,6 +123,7 @@
                                             'Add Sub Menu' => 'Privacy/Add_SubMenu',
 
                                             'Employee Requirement' => 'Master/Standard_Actual',
+                                            'Position Grade Mapping' => 'Master/Employee_Position_Map',
                                             'Machine Master' => 'Master/Machine_Master',
                                             'Unit E-Master Status' => 'Admin/Unit_Details',
 
@@ -130,6 +131,7 @@
                                             'Employee Attendance Report' => 'Employee/Employee_Attendance',
                                             'Employee Manual Attendance' => 'Employee/Attendance_Entry',
                                             'Employee Punching Details' => 'Employee/Details_Punching_List',
+                                            'Employee I-Report' => 'Incentive/Position_Report',
 
                                             'Employee Work Allocation' => 'Work',
                                             'Late Work Allocation' => 'Work/Late_Extra',

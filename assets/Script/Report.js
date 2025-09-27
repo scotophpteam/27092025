@@ -6,14 +6,14 @@ $(document).ready(function () {
   $("#Date").val(currentDate);
   $("#Date").attr("max", currentDate);
 
-var table = $("#OT_Employee_Report_Table").DataTable({
- paging: false,
- lengthChange: false,
- searching: true,
- ordering: true,
- info: true,
- autoWidth: true,
- });
+  var table = $("#OT_Employee_Report_Table").DataTable({
+    paging: false,
+    lengthChange: false,
+    searching: true,
+    ordering: true,
+    info: true,
+    autoWidth: true,
+  });
 
   $("#Reports_For_Allocation").hide();
 
@@ -1019,10 +1019,14 @@ var table = $("#OT_Employee_Report_Table").DataTable({
 
   $("#OT_Employee_Report_Section").hide();
   $("#OT_Employee_Report_Down").hide();
+
   $('#OT_Employee_Report_View').on('click', function () {
-    // alert("hi")
     var Date = $('#Date').val();
     var Shift = $('#Sel_Shift').val();
+
+    var table = $('#OT_Employee_Report_Table').DataTable();
+
+    table.clear().draw();
 
     $.ajax({
       url: baseurl + "Reports/Get_OT_Employee_List",
@@ -1035,42 +1039,32 @@ var table = $("#OT_Employee_Report_Table").DataTable({
         var responseData = JSON.parse(response);
         var Get_OT_Employee_List = responseData.Get_OT_Employee_List;
 
-        let continuousIndex = 1;
-
         if (responseData.status == "error") {
-
           swal({
             type: "warning",
             title: "Warning",
             text: responseData.message,
           });
+
           $("#OT_Employee_Report_Section").hide();
           $("#OT_Employee_Report_Down").hide();
-
         } else {
-          let allEmpty = true;
-          let completedCount = 0;
-          let missedCount = 0;
-          let manualAttendanceCount = 0;
           $("#OT_Employee_Report_Down").show();
-          $("#OT_Employee_Report_Table tbody").empty();
           $("#OT_Employee_Report_Section").show();
 
           $.each(Get_OT_Employee_List, function (index, item) {
-            var row = `
-                        <tr>
-                            <td>${index + 1}</td>
-                            <td>${item.WorkArea}</td>
-                            <td>${item.EmpNo}</td>
-                            <td>${item.FirstName}</td>
-                             <td>${item.Previous_Shift}</td>
-                             <td>${item.Frame}</td>
-                            <td>${item.Machine_Id}</td>
-                        </tr>
-                    `;
-            $("#OT_Employee_Report_Table tbody").append(row);
-            table.row.add($(row)).draw();
-            continuousIndex++;
+            var row = [
+              index + 1,
+              item.WorkArea,
+              item.EmpNo,
+              item.FirstName,
+              item.Previous_Shift,
+              item.Frame,
+              item.Machine_Id
+            ];
+
+            // Add row using DataTable API
+            table.row.add(row).draw(false);
           });
         }
       }
@@ -1080,6 +1074,11 @@ var table = $("#OT_Employee_Report_Table").DataTable({
   $("#OT_Employee_Report_Down").on("click", function () {
     var Date = $("#Date").val();
     var Shift = $("#Sel_Shift").val();
+    var table = $('#OT_Employee_Report_Table').DataTable();
+
+    table.clear().draw();
+
+
 
     // alert(Shift);   
 

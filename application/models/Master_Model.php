@@ -941,4 +941,68 @@ WHERE Log.UserID = '$Login_User'
             'Late_Total_Allocated_Count' => $Late_Total_Allocated_Result
         ];
     }
+
+
+    public function Emp_Department($CompanyCode, $LocationCode, $Login_User, $UserRole){
+
+        $Sql = "SELECT DeptName FROM Department_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode'";
+       
+        $Query = $this->db->query($Sql);
+
+        if($Query->num_rows() > 0){
+
+            return $Query->result();
+
+        }else {
+
+            return 0;
+
+        }
+
+    }
+
+    public function Position_Details($CompanyCode, $LocationCode, $Login_User, $UserRole, $Sub_Department){
+
+        $Sql = "SELECT WorkArea,Grade FROM  Web_Work_Area_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Department = '$Sub_Department'";
+
+        $Query = $this->db->query($Sql);
+
+        if($Query->num_rows() > 0){
+
+            return $Query->result();
+
+        }else {
+
+            return 0;
+
+        }
+
+    }
+
+    public function Save_Updated_Grades($CompanyCode, $LocationCode, $Login_User, $UserRole, $UpdatedGrades){
+
+
+        foreach ($UpdatedGrades as $item) {
+
+                $Position = $item['Position'];
+                $Grade = $item['Grade'];
+                $Sub_Department = $item['Sub_Department'];
+                $Current_Time = date('Y-m-d H:i:s');
+
+                $Sql = "UPDATE Web_Work_Area_Mst SET Grade = '$Grade',UpdatedBy = '$Login_User', UpdatedTime = '$Current_Time' WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Department = '$Sub_Department' AND WorkArea = '$Position'";
+                $Query = $this->db->query($Sql);
+
+                
+            }
+
+            if($this->db->affected_rows() > 0){
+
+                    return 1;
+
+                } else {
+
+                    return 0;
+                }
+
+    }
 }

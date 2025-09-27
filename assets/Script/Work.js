@@ -310,7 +310,7 @@ $(document).ready(function () {
 
             $("#Allocation_Table tbody .custom-select2").select2({
               placeholder: "",
-              allowClear: true,
+              allowClear: false,
               width: "150px",
               dropdownCssClass: "custom-select2-dropdown",
               containerCssClass: "custom-select2-container",
@@ -497,7 +497,7 @@ $(document).ready(function () {
 
             $("#Allocation_Table tbody .custom-select2").select2({
               placeholder: "",
-              allowClear: true,
+              allowClear: false,
               width: "150px",
               dropdownCssClass: "custom-select2-dropdown",
               containerCssClass: "custom-select2-container",
@@ -1121,7 +1121,7 @@ $(document).ready(function () {
 
                 $("#Allocation_Table tbody .custom-select2").select2({
                   placeholder: "",
-                  allowClear: true,
+                  allowClear: false,
                   width: "150px",
                   dropdownCssClass: "custom-select2-dropdown",
                   containerCssClass: "custom-select2-container",
@@ -1306,7 +1306,7 @@ $(document).ready(function () {
 
                 $("#Allocation_Table tbody .custom-select2").select2({
                   placeholder: "",
-                  allowClear: true,
+                  allowClear: false,
                   width: "150px",
                   dropdownCssClass: "custom-select2-dropdown",
                   containerCssClass: "custom-select2-container",
@@ -1506,7 +1506,7 @@ $(document).ready(function () {
 
                 $("#Allocation_Table tbody .custom-select2").select2({
                   placeholder: "",
-                  allowClear: true,
+                  allowClear: false,
                   width: "150px",
                   dropdownCssClass: "custom-select2-dropdown",
                   containerCssClass: "custom-select2-container",
@@ -1691,7 +1691,7 @@ $(document).ready(function () {
 
                 $("#Allocation_Table tbody .custom-select2").select2({
                   placeholder: "",
-                  allowClear: true,
+                  allowClear: false,
                   width: "150px",
                   dropdownCssClass: "custom-select2-dropdown",
                   containerCssClass: "custom-select2-container",
@@ -1963,7 +1963,7 @@ $(document).ready(function () {
 
                     $("#Allocation_Table tbody .custom-select2").select2({
                       placeholder: "",
-                      allowClear: true,
+                      allowClear: false,
                       width: "150px",
                       dropdownCssClass: "custom-select2-dropdown",
                       containerCssClass: "custom-select2-container",
@@ -2148,7 +2148,7 @@ $(document).ready(function () {
 
                     $("#Allocation_Table tbody .custom-select2").select2({
                       placeholder: "",
-                      allowClear: true,
+                      allowClear: false,
                       width: "150px",
                       dropdownCssClass: "custom-select2-dropdown",
                       containerCssClass: "custom-select2-container",
@@ -2348,7 +2348,7 @@ $(document).ready(function () {
 
                     $("#Allocation_Table tbody .custom-select2").select2({
                       placeholder: "",
-                      allowClear: true,
+                      allowClear: false,
                       width: "150px",
                       dropdownCssClass: "custom-select2-dropdown",
                       containerCssClass: "custom-select2-container",
@@ -2533,7 +2533,7 @@ $(document).ready(function () {
 
                     $("#Allocation_Table tbody .custom-select2").select2({
                       placeholder: "",
-                      allowClear: true,
+                      allowClear: false,
                       width: "150px",
                       dropdownCssClass: "custom-select2-dropdown",
                       containerCssClass: "custom-select2-container",
@@ -2778,7 +2778,7 @@ $(document).ready(function () {
 
                     $("#Allocation_Table tbody .custom-select2").select2({
                       placeholder: "",
-                      allowClear: true,
+                      allowClear: false,
                       width: "150px",
                       dropdownCssClass: "custom-select2-dropdown",
                       containerCssClass: "custom-select2-container",
@@ -2904,24 +2904,24 @@ $(document).ready(function () {
                       continuousIndex++;
                     });
 
-                   $.ajax({
-              url: baseurl + "Work/Work_Areas",
-              method: "POST",
-              data: { Department: $(".Department").val() },
-              success: function (response) {
-                const Response_Data = JSON.parse(response);
-                const Work_Areas = Response_Data.Work_Areas;
+                    $.ajax({
+                      url: baseurl + "Work/Work_Areas",
+                      method: "POST",
+                      data: { Department: $(".Department").val() },
+                      success: function (response) {
+                        const Response_Data = JSON.parse(response);
+                        const Work_Areas = Response_Data.Work_Areas;
 
-                $("#Allocation_Table tbody tr").each(function () {
-                  const workAreaSelect = $(this).find(".WorkArea");
-                  $.each(Work_Areas, function (_, workArea) {
-                    if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
-                      workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
-                    }
-                  });
-                });
-              },
-            });
+                        $("#Allocation_Table tbody tr").each(function () {
+                          const workAreaSelect = $(this).find(".WorkArea");
+                          $.each(Work_Areas, function (_, workArea) {
+                            if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                              workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                            }
+                          });
+                        });
+                      },
+                    });
 
                     $("#Allocation_Table tbody tr").each(function () {
                       const $row = $(this);
@@ -2963,7 +2963,7 @@ $(document).ready(function () {
 
                     $("#Allocation_Table tbody .custom-select2").select2({
                       placeholder: "",
-                      allowClear: true,
+                      allowClear: false,
                       width: "150px",
                       dropdownCssClass: "custom-select2-dropdown",
                       containerCssClass: "custom-select2-container",
@@ -3169,23 +3169,23 @@ $(document).ready(function () {
           });
 
           $.ajax({
-              url: baseurl + "Work/Work_Areas",
-              method: "POST",
-              data: { Department: $(".Department").val() },
-              success: function (response) {
-                const Response_Data = JSON.parse(response);
-                const Work_Areas = Response_Data.Work_Areas;
+            url: baseurl + "Work/Work_Areas",
+            method: "POST",
+            data: { Department: $(".Department").val() },
+            success: function (response) {
+              const Response_Data = JSON.parse(response);
+              const Work_Areas = Response_Data.Work_Areas;
 
-                $("#Allocation_Table tbody tr").each(function () {
-                  const workAreaSelect = $(this).find(".WorkArea");
-                  $.each(Work_Areas, function (_, workArea) {
-                    if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
-                      workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
-                    }
-                  });
+              $("#Allocation_Table tbody tr").each(function () {
+                const workAreaSelect = $(this).find(".WorkArea");
+                $.each(Work_Areas, function (_, workArea) {
+                  if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                    workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                  }
                 });
-              },
-            });
+              });
+            },
+          });
 
           $("#Allocation_Table tbody tr").each(function () {
             const $r = $(this);
@@ -3217,7 +3217,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -3344,23 +3344,23 @@ $(document).ready(function () {
           });
 
           $.ajax({
-              url: baseurl + "Work/Work_Areas",
-              method: "POST",
-              data: { Department: $(".Department").val() },
-              success: function (response) {
-                const Response_Data = JSON.parse(response);
-                const Work_Areas = Response_Data.Work_Areas;
+            url: baseurl + "Work/Work_Areas",
+            method: "POST",
+            data: { Department: $(".Department").val() },
+            success: function (response) {
+              const Response_Data = JSON.parse(response);
+              const Work_Areas = Response_Data.Work_Areas;
 
-                $("#Allocation_Table tbody tr").each(function () {
-                  const workAreaSelect = $(this).find(".WorkArea");
-                  $.each(Work_Areas, function (_, workArea) {
-                    if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
-                      workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
-                    }
-                  });
+              $("#Allocation_Table tbody tr").each(function () {
+                const workAreaSelect = $(this).find(".WorkArea");
+                $.each(Work_Areas, function (_, workArea) {
+                  if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                    workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                  }
                 });
-              },
-            });
+              });
+            },
+          });
 
           $("#Allocation_Table tbody tr").each(function () {
             const $row = $(this);
@@ -3402,7 +3402,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -3639,7 +3639,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -3824,7 +3824,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -4035,7 +4035,7 @@ $(document).ready(function () {
 
             $("#Allocation_Table tbody .custom-select2").select2({
               placeholder: "",
-              allowClear: true,
+              allowClear: false,
               width: "150px",
               dropdownCssClass: "custom-select2-dropdown",
               containerCssClass: "custom-select2-container",
@@ -4220,7 +4220,7 @@ $(document).ready(function () {
 
             $("#Allocation_Table tbody .custom-select2").select2({
               placeholder: "",
-              allowClear: true,
+              allowClear: false,
               width: "150px",
               dropdownCssClass: "custom-select2-dropdown",
               containerCssClass: "custom-select2-container",
@@ -4423,7 +4423,7 @@ $(document).ready(function () {
 
             $("#Allocation_Table tbody .custom-select2").select2({
               placeholder: "",
-              allowClear: true,
+              allowClear: false,
               width: "150px",
               dropdownCssClass: "custom-select2-dropdown",
               containerCssClass: "custom-select2-container",
@@ -4608,7 +4608,7 @@ $(document).ready(function () {
 
             $("#Allocation_Table tbody .custom-select2").select2({
               placeholder: "",
-              allowClear: true,
+              allowClear: false,
               width: "150px",
               dropdownCssClass: "custom-select2-dropdown",
               containerCssClass: "custom-select2-container",
@@ -4804,7 +4804,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -4976,7 +4976,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -5182,7 +5182,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -5354,7 +5354,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -5560,7 +5560,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -5732,7 +5732,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -5928,7 +5928,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -6100,7 +6100,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -6295,7 +6295,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -6467,7 +6467,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -6663,7 +6663,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -6835,7 +6835,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -7030,7 +7030,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -7202,7 +7202,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -7398,7 +7398,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
@@ -7570,7 +7570,7 @@ $(document).ready(function () {
 
           $("#Allocation_Table tbody .custom-select2").select2({
             placeholder: "",
-            allowClear: true,
+            allowClear: false,
             width: "150px",
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",

@@ -255,7 +255,6 @@
                 <div class="min-height-200px">
                     <div id="preloader" style="display: none; text-align: center; padding: 10px;">
                         <img src="https://i.gifer.com/ZKZg.gif" width="60">
-
                     </div>
 
 
@@ -275,7 +274,7 @@
 
 
 
-                        <div class="table-container" id="Allocation_Details_Color_Details">
+                        <div class="table-container" id="Allocation_Details_Color_Details" style="display:none;">
                             <div class="row py-3">
                                 <button type="button" class="btn btn-sm custom-white custom-btn" id="unAllocatedBtn">
                                     Un Allocated: <span id="unAllocatedCount">0</span>
