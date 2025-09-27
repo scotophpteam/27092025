@@ -23,6 +23,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 | a PHP script and you can easily do that on your own.
 |
 */
+//
 // $config['base_url'] = 'http://192.168.1.4/Precot/';
 $config['base_url'] = 'http://localhost/Precot/';
 // $config['base_url'] = 'http://172.20.0.90:8080/Precot/';
