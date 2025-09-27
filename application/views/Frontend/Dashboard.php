@@ -250,7 +250,7 @@ if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] ==
                         <!-- External Script -->
                         <script src="<?php echo base_url('assets/Script/Standard_Actual.js'); ?>"></script>
 
-                        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+                        <!-- <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script> -->
 
                 <?php
             } // End of else (non-manager)

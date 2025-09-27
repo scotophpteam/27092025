@@ -95,27 +95,6 @@ $db['default'] = array(
 	'save_queries' => TRUE
 );
 
-// $db['default'] = array(
-// 	'dsn'	=> '',
-// 	'hostname' => 'SCOTO-PHP',
-// 	'username' => 'sa',
-// 	'password' => 'SCOTO@2025',
-// 	'database' => 'PRECOT_ERP_HR',
-// 	'dbdriver' => 'sqlsrv',
-// 	'dbprefix' => '',
-// 	'pconnect' => FALSE,
-// 	'db_debug' => (ENVIRONMENT !== 'production'),
-// 	'cache_on' => FALSE,
-// 	'cachedir' => '',
-// 	'char_set' => 'utf8',
-// 	'dbcollat' => 'utf8_general_ci',
-// 	'swap_pre' => '',
-// 	'encrypt' => FALSE,
-// 	'compress' => FALSE,
-// 	'stricton' => FALSE,
-// 	'failover' => array(),
-// 	'save_queries' => TRUE
-// );
 
 // $db['default'] = array(
 // 	'dsn'	=> '',
@@ -136,5 +115,31 @@ $db['default'] = array(
 // 	'compress' => FALSE,
 // 	'stricton' => FALSE,
 // 	'failover' => array(),
-// 	'save_queries' => TRUE
+// 	'save_queries' => TRUE,
+// 	'pconnect' => TRUE,
+
+// );
+
+
+// $db['default'] = array(
+// 	'dsn'	=> '',
+// 	'hostname' => 'DESKTOP-K7GJBFG',
+// 	'username' => 'sa',
+// 	'password' => '1234',
+// 	'database' => 'PRECOT_ERP_HR',
+// 	'dbdriver' => 'sqlsrv',
+// 	'dbprefix' => '',
+// 	'pconnect' => FALSE,
+// 	'db_debug' => (ENVIRONMENT !== 'production'),
+// 	'cache_on' => FALSE,
+// 	'cachedir' => '',
+// 	'char_set' => 'utf8',
+// 	'dbcollat' => 'utf8_general_ci',
+// 	'swap_pre' => '',
+// 	'encrypt' => FALSE,
+// 	'compress' => FALSE,
+// 	'stricton' => FALSE,
+// 	'failover' => array(),
+// 	'save_queries' => TRUE,
+// 	'pconnect' => TRUE,
 // );

@@ -1707,129 +1707,254 @@ class Reports extends CI_Controller
     }
 
 
-    public function Employee_Punching_List_Download_Login()
-    {
-        $Session = $this->session->userdata('sess_array');
+public function Employee_Punching_List_Download_Login()
+{
+    $Session = $this->session->userdata('sess_array');
 
-        if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+    if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
 
-            $this->data['Favicon'] = '';
+        $CompanyCode = $Session['Ccode'];
+        $LocationCode = $Session['Lcode'];
+        $Login_User = $Session['UserName'];
 
-            $CompanyCode = $Session['Ccode'];
-            $LocationCode = $Session['Lcode'];
-            $Login_User = $Session['UserName'];
+        if ($this->input->post()) {
 
-            if ($this->input->post()) {
+            $Date = $this->input->post('Date');
+            $Shift = $this->input->post('Shift');
 
-                $Date = $this->input->post('Date');
-                $Shift = $this->input->post('Shift');
+            $Get_Punching_List = $this->Employee_Model->Get_Punching_List($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
 
-                $this->data['Get_Punching_List'] = $Get_Punching_List = $this->Employee_Model->Get_Punching_List($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
-
-                if ($Get_Punching_List == 0) {
-                    echo json_encode([
-                        'status' => 'error',
-                        'message' => 'Shift Not Starting Employee Details Not Found..'
-                    ]);
-                } else {
-
-                    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-                    $sheet = $spreadsheet->getActiveSheet();
-
-                    $mainHeading = 'Employee Punching LogIn Details';
-                    $sheet->mergeCells('A1:H1');
-                    $sheet->setCellValue('A1', $mainHeading);
-                    $sheet->getStyle('A1')->applyFromArray([
-                        'font' => [
-                            'bold' => true,
-                            'size' => 16,
-                        ],
-                        'alignment' => [
-                            'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                            'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-                        ],
-                    ]);
-                    $sheet->getRowDimension('1')->setRowHeight(30);
-
-                    $sheet->setCellValue('A2', 'COMPANY: ' . $CompanyCode)
-                        ->setCellValue('A3', 'LOCATION: ' . $LocationCode)
-                        ->setCellValue('I2', 'SHIFT: ' . $Shift)
-                        ->setCellValue('I3', 'DATE: ' . $Date);
-
-                    $sheet->getStyle('I2:I3')->applyFromArray([
-                        'font' => ['bold' => true],
-                    ]);
-                    $sheet->getStyle('A2:A3')->applyFromArray([
-                        'font' => [
-                            'bold' => true,
-                            'size' => 10,
-                        ],
-                    ]);
-
-                    // Proper Column Headers
-                    $sheet->setCellValue('A6', 'Sub Department')
-                        ->setCellValue('B6', 'Wages')
-                        ->setCellValue('C6', 'Sub Division')
-                        ->setCellValue('D6', 'Position')
-                        ->setCellValue('E6', 'Employee ID')
-                        ->setCellValue('F6', 'Employee Name')
-                        ->setCellValue('G6', 'Login In')
-                        ->setCellValue('H6', 'Break Out')
-                        ->setCellValue('I6', 'Break In');
-
-                    $sheet->getStyle('A6:I6')->applyFromArray([
-                        'font' => [
-                            'bold' => true,
-                            'size' => 10,
-                        ],
-                        'alignment' => [
-                            'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                            'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-                        ],
-                        'borders' => [
-                            'allBorders' => [
-                                'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                            ],
-                        ],
-                    ]);
-
-                    $rowNumber = 7;
-                    foreach ($Get_Punching_List as $data) {
-                        $sheet->setCellValue('A' . $rowNumber, $data->Sub_Department)
-                            ->setCellValue('B' . $rowNumber, $data->Category)
-                            ->setCellValue('C' . $rowNumber, $data->SubSection_Name)
-                            ->setCellValue('D' . $rowNumber, $data->WorkArea)
-                            ->setCellValue('E' . $rowNumber, $data->MachineID)
-                            ->setCellValue('F' . $rowNumber, $data->EmpName)
-                            ->setCellValue('G' . $rowNumber, $data->Day_In)
-                            ->setCellValue('H' . $rowNumber, $data->Break_Out)
-                            ->setCellValue('I' . $rowNumber, $data->Break_IN);
-                        $rowNumber++;
-                    }
-
-                    // Adjust column widths
-                    foreach (range('A', 'I') as $col) {
-                        $sheet->getColumnDimension($col)->setAutoSize(true);
-                    }
-
-                    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-                    $currentDate = date('Y-m-d');
-                    $file_path = 'assets/reports/Get_Punching_List_' . $currentDate . '.xlsx';
-
-                    if (!file_exists('assets/reports')) {
-                        mkdir('assets/reports', 0777, true);
-                    }
-
-                    $writer->save($file_path);
-
-                    echo json_encode(['file_url' => base_url($file_path)]);
-                    exit;
-                }
+            if (empty($Get_Punching_List)) {
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => 'Shift Not Starting Employee Details Not Found..'
+                ]);
+                exit;
             }
-        } else {
-            redirect(base_url(), 'refresh');
+
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+
+            $mainHeading = 'Employee Punching LogIn Details';
+            $sheet->mergeCells('A1:J1');
+            $sheet->setCellValue('A1', $mainHeading);
+            $sheet->getStyle('A1')->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'size' => 16,
+                ],
+                'alignment' => [
+                    'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                    'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                ],
+            ]);
+            $sheet->getRowDimension('1')->setRowHeight(30);
+
+            $sheet->setCellValue('A2', 'COMPANY: ' . $CompanyCode)
+                ->setCellValue('A3', 'LOCATION: ' . $LocationCode)
+                ->setCellValue('I2', 'SHIFT: ' . $Shift)
+                ->setCellValue('I3', 'DATE: ' . $Date);
+
+            $sheet->getStyle('I2:I3')->applyFromArray([
+                'font' => ['bold' => true],
+            ]);
+            $sheet->getStyle('A2:A3')->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'size' => 10,
+                ],
+            ]);
+
+            $sheet->setCellValue('A6', 'Sub Department')
+                ->setCellValue('B6', 'Wages')
+                ->setCellValue('C6', 'Sub Division')
+                ->setCellValue('D6', 'Position')
+                ->setCellValue('E6', 'Employee ID')
+                ->setCellValue('F6', 'Employee Name')
+                ->setCellValue('G6', 'Day In')
+                ->setCellValue('H6', 'Break Out')
+                ->setCellValue('I6', 'Break In')
+                ->setCellValue('J6', 'Day Out');
+
+            $sheet->getStyle('A6:J6')->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'size' => 10,
+                ],
+                'alignment' => [
+                    'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                    'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    ],
+                ],
+            ]);
+
+            $rowNumber = 7;
+            foreach ($Get_Punching_List as $data) {
+                $sheet->setCellValue('A' . $rowNumber, $data->Sub_Department)
+                    ->setCellValue('B' . $rowNumber, $data->Category)
+                    ->setCellValue('C' . $rowNumber, $data->SubSection_Name)
+                    ->setCellValue('D' . $rowNumber, $data->WorkArea)
+                    ->setCellValue('E' . $rowNumber, $data->MachineID)
+                    ->setCellValue('F' . $rowNumber, $data->EmpName)
+                    ->setCellValue('G' . $rowNumber, $data->Day_In)
+                    ->setCellValue('H' . $rowNumber, $data->Break_Out)
+                    ->setCellValue('I' . $rowNumber, $data->Break_IN)
+                    ->setCellValue('J' . $rowNumber, $data->Day_Out);
+                $rowNumber++;
+            }
+
+            foreach (range('A', 'J') as $col) {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $currentDate = date('Y-m-d');
+            $directory = 'assets/reports';
+
+            if (!is_dir($directory)) {
+                mkdir($directory, 0777, true);
+            }
+
+            $file_path = $directory . '/Get_Punching_List_' . $currentDate . '.xlsx';
+            $writer->save($file_path);
+
+            echo json_encode(['file_url' => base_url($file_path)]);
+            exit;
         }
+    } else {
+        redirect(base_url(), 'refresh');
     }
+}
+
+
+
+public function Employee_Punching_List_Download_Login_Det()
+{
+    $Session = $this->session->userdata('sess_array');
+
+    if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+
+        $CompanyCode = $Session['Ccode'];
+        $LocationCode = $Session['Lcode'];
+        $Login_User = $Session['UserName'];
+
+        if ($this->input->post()) {
+
+            $Date = $this->input->post('Date');
+            $Shift = $this->input->post('Shift');
+
+            $Get_Punching_List = $this->Employee_Model->Employee_Punching_List_Download_Login_Det($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+
+            if (empty($Get_Punching_List)) {
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => 'Shift Not Starting Employee Details Not Found..'
+                ]);
+                exit;
+            }
+
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+
+            $mainHeading = 'Employee Punching LogIn Details';
+            $sheet->mergeCells('A1:J1');
+            $sheet->setCellValue('A1', $mainHeading);
+            $sheet->getStyle('A1')->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'size' => 16,
+                ],
+                'alignment' => [
+                    'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                    'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                ],
+            ]);
+            $sheet->getRowDimension('1')->setRowHeight(30);
+
+            $sheet->setCellValue('A2', 'COMPANY: ' . $CompanyCode)
+                ->setCellValue('A3', 'LOCATION: ' . $LocationCode)
+                ->setCellValue('I2', 'SHIFT: ' . $Shift)
+                ->setCellValue('I3', 'DATE: ' . $Date);
+
+            $sheet->getStyle('I2:I3')->applyFromArray([
+                'font' => ['bold' => true],
+            ]);
+            $sheet->getStyle('A2:A3')->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'size' => 10,
+                ],
+            ]);
+
+            $sheet->setCellValue('A6', 'Sub Department')
+                ->setCellValue('B6', 'Wages')
+                ->setCellValue('C6', 'Sub Division')
+                ->setCellValue('D6', 'Position')
+                ->setCellValue('E6', 'Employee ID')
+                ->setCellValue('F6', 'Employee Name')
+                ->setCellValue('G6', 'Day In')
+                ->setCellValue('H6', 'Break Out')
+                ->setCellValue('I6', 'Break In')
+                ->setCellValue('J6', 'Day Out');
+
+            $sheet->getStyle('A6:J6')->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'size' => 10,
+                ],
+                'alignment' => [
+                    'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                    'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    ],
+                ],
+            ]);
+
+            $rowNumber = 7;
+            foreach ($Get_Punching_List as $data) {
+                $sheet->setCellValue('A' . $rowNumber, $data->Sub_Department)
+                    ->setCellValue('B' . $rowNumber, $data->Category)
+                    ->setCellValue('C' . $rowNumber, $data->SubSection_Name)
+                    ->setCellValue('D' . $rowNumber, $data->WorkArea)
+                    ->setCellValue('E' . $rowNumber, $data->MachineID)
+                    ->setCellValue('F' . $rowNumber, $data->EmpName)
+                    ->setCellValue('G' . $rowNumber, $data->Day_In)
+                    ->setCellValue('H' . $rowNumber, $data->Break_Out)
+                    ->setCellValue('I' . $rowNumber, $data->Break_IN)
+                    ->setCellValue('J' . $rowNumber, $data->Day_Out);
+                $rowNumber++;
+            }
+
+            foreach (range('A', 'J') as $col) {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $currentDate = date('Y-m-d');
+            $directory = 'assets/reports';
+
+            if (!is_dir($directory)) {
+                mkdir($directory, 0777, true);
+            }
+
+            $file_path = $directory . '/Get_Punching_List_' . $currentDate . '.xlsx';
+            $writer->save($file_path);
+
+            echo json_encode(['file_url' => base_url($file_path)]);
+            exit;
+        }
+    } else {
+        redirect(base_url(), 'refresh');
+    }
+}
+
 
     public function Download_Attendance_Grade()
     {
@@ -1945,115 +2070,107 @@ class Reports extends CI_Controller
     }
 
 
-    public function Extra_Hours_Employee_Download()
-    {
-        $Session = $this->session->userdata('sess_array');
-        if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
-            if ($this->input->post()) {
-                $CompanyCode = $Session['Ccode'];
-                $LocationCode = $Session['Lcode'];
-                $Login_User = $Session['UserName'];
-                $Date = $this->input->post('Date');
-                $Type = $this->input->post('Type');
+  public function Extra_Hours_Employee_Download()
+{
+    $Session = $this->session->userdata('sess_array');
 
-                $this->data['Extra_Hours_Employee_Download'] = $Extra_Hours_Employee_Download = $this->Reports_Model->Extra_Hours_Employee_Download($CompanyCode, $LocationCode, $Login_User, $Date, $Type);
+    if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+        if ($this->input->post()) {
+            $CompanyCode = $Session['Ccode'];
+            $LocationCode = $Session['Lcode'];
+            $Login_User = $Session['UserName'];
+            $Date = $this->input->post('Date');
+            $Type = $this->input->post('Type');
 
-                if (empty($Extra_Hours_Employee_Download)) {
-                    $Response = [
-                        'Status' => 'Error',
-                        'Message' => 'Employee Extra Hours Work Details Not Found.'
-                    ];
-                    echo json_encode($Response);
-                    return;
-                }
+            $Extra_Hours_Employee_Download = $this->Reports_Model->Extra_Hours_Employee_Download($CompanyCode, $LocationCode, $Login_User, $Date, $Type);
 
-                $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-                $sheet = $spreadsheet->getActiveSheet();
-
-                $mainHeading = 'Employee Extra Hours Work Details';
-                $sheet->mergeCells('A1:H1');
-                $sheet->setCellValue('A1', $mainHeading);
-                $sheet->getStyle('A1')->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                        'size' => 16,
-                    ],
-                    'alignment' => [
-                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-                    ],
+            if (empty($Extra_Hours_Employee_Download)) {
+                echo json_encode([
+                    'Status' => 'Error',
+                    'Message' => 'Employee Extra Hours Work Details Not Found.'
                 ]);
-                $sheet->getRowDimension('1')->setRowHeight(30);
-
-                $sheet->setCellValue('A2', 'COMPANY: ' . $CompanyCode)
-                    ->setCellValue('H2', 'LOCATION: ' . $LocationCode);
-
-                $sheet->getStyle('A2:H3')->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                        'size' => 10,
-                    ],
-                ]);
-
-                // Table headers
-                $sheet->setCellValue('A3', 'Date')
-                    ->setCellValue('B3', 'Employee ID')
-                    ->setCellValue('C3', 'Employee Name')
-                    ->setCellValue('D3', 'IN')
-                    ->setCellValue('E3', 'OUT')
-                    ->setCellValue('F3', 'E-Master Close')
-                    ->setCellValue('G3', 'Time Difference')
-                    ->setCellValue('H3', 'Working Hours');
-
-                $sheet->getStyle('A3:H3')->applyFromArray([
-                    'font' => ['bold' => true],
-                    'alignment' => [
-                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                    ],
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                        ],
-                    ],
-                ]);
-
-                // Fill data
-                $rowNumber = 4;
-                foreach ($Extra_Hours_Employee_Download as $data) {
-                    $sheet->setCellValue('A' . $rowNumber, $data->WorkDate)
-                        ->setCellValue('B' . $rowNumber, $data->EmpNo)
-                        ->setCellValue('C' . $rowNumber, $data->FirstName)
-                        ->setCellValue('D' . $rowNumber, $data->FirstPunchIn)
-                        ->setCellValue('E' . $rowNumber, $data->LastPunchOut)
-                        ->setCellValue('F' . $rowNumber, $data->Updated_Time)
-                        ->setCellValue('G' . $rowNumber, $data->TimeDifference)
-                        ->setCellValue('H' . $rowNumber, $data->TotalWorkingHours);
-                    $rowNumber++;
-                }
-
-                // Auto-size columns
-                foreach (range('A', 'H') as $col) {
-                    $sheet->getColumnDimension($col)->setAutoSize(true);
-                }
-
-                $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-                $currentDate = date('Y-m-d_H-i-s');
-                $fileName = 'Employee_Extra_Hours_' . $currentDate . '.xlsx';
-                $filePath = 'assets/reports/' . $fileName;
-
-                if (!file_exists('assets/reports')) {
-                    mkdir('assets/reports', 0777, true);
-                }
-
-                $writer->save($filePath);
-
-                echo json_encode(['Status' => 'Success', 'file_url' => base_url($filePath)]);
                 return;
             }
-        } else {
-            redirect(base_url());
+
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+
+            $mainHeading = 'Employee Extra Hours Work Details';
+            $sheet->mergeCells('A1:G1');
+            $sheet->setCellValue('A1', $mainHeading);
+            $sheet->getStyle('A1')->applyFromArray([
+                'font' => ['bold' => true, 'size' => 16],
+                'alignment' => [
+                    'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                    'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                ],
+            ]);
+            $sheet->getRowDimension('1')->setRowHeight(30);
+
+            $sheet->setCellValue('A2', 'COMPANY: ' . $CompanyCode)
+                  ->setCellValue('G2', 'LOCATION: ' . $LocationCode);
+
+            $sheet->getStyle('A2:G3')->applyFromArray([
+                'font' => ['bold' => true, 'size' => 10],
+            ]);
+
+            // Table headers
+            $sheet->setCellValue('A3', 'Date')
+                  ->setCellValue('B3', 'Employee ID')
+                  ->setCellValue('C3', 'Employee Name')
+                  ->setCellValue('D3', 'IN')
+                  ->setCellValue('E3', 'OUT')
+                  ->setCellValue('F3', 'E-Master Close')
+                  ->setCellValue('G3', 'Working Hours');
+
+            $sheet->getStyle('A3:G3')->applyFromArray([
+                'font' => ['bold' => true],
+                'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+                'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
+            ]);
+
+            // Fill data
+            $rowNumber = 4;
+            foreach ($Extra_Hours_Employee_Download as $data) {
+                $sheet->setCellValue('A' . $rowNumber, $Date)
+                      ->setCellValue('B' . $rowNumber, $data['Employee_ID'])
+                      ->setCellValue('C' . $rowNumber, $data['Employee_Name'])
+                      ->setCellValue('D' . $rowNumber, $data['IN_Time'])
+                      ->setCellValue('E' . $rowNumber, $data['OUT_Time'])
+                      ->setCellValue('F' . $rowNumber, $data['Updated_Time'])
+                      ->setCellValue('G' . $rowNumber, $data['Extra_Hours']);
+                $rowNumber++;
+            }
+
+            // Auto-size columns
+            foreach (range('A', 'G') as $col) {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+            $Dates = date('d-m-Y', strtotime($Date));
+            $fileName = 'Employee_Extra_Hours_' . $Dates . '.xlsx';
+            $filePath = 'assets/reports/' . $fileName;
+
+            if (!file_exists('assets/reports')) {
+                mkdir('assets/reports', 0777, true);
+            }
+
+            $writer->save($filePath);
+
+            echo json_encode([
+                'Status' => 'Success',
+                'file_url' => base_url($filePath),
+                'file_Name' => $fileName
+            ]);
+            return;
         }
+    } else {
+        redirect(base_url());
     }
+}
+
 
 
     public function OT_Hours_Employee_Download()
@@ -2064,13 +2181,20 @@ class Reports extends CI_Controller
             if ($this->input->post()) {
                 $CompanyCode = $Session['Ccode'];
                 $LocationCode = $Session['Lcode'];
-                $Login_User = $Session['UserName'];
+                $Login_User   = $Session['UserName'];
 
                 $Date  = $this->input->post('Date');
                 $Type  = $this->input->post('Type');
                 $Shift = $this->input->post('Shift');
 
-                $OT_Hours_Employee_Download = $this->Reports_Model->OT_Hours_Employee_Download($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Type);
+                $OT_Hours_Employee_Download = $this->Reports_Model->OT_Hours_Employee_Download(
+                    $CompanyCode,
+                    $LocationCode,
+                    $Login_User,
+                    $Date,
+                    $Shift,
+                    $Type
+                );
 
                 if (empty($OT_Hours_Employee_Download)) {
                     echo json_encode(['Status' => 'Error', 'Message' => 'Employee Extra Hours Work Details Not Found.']);
@@ -2081,21 +2205,21 @@ class Reports extends CI_Controller
                 $sheet = $spreadsheet->getActiveSheet();
 
                 // Title Row
-                $sheet->mergeCells('A1:K1');
+                $sheet->mergeCells('A1:J1');
                 $sheet->setCellValue('A1', 'Employee OT Hours Work Details');
                 $sheet->getStyle('A1')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 16],
                     'alignment' => [
                         'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                        'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
                     ],
                 ]);
                 $sheet->getRowDimension('1')->setRowHeight(30);
 
                 // Info Row
                 $sheet->setCellValue('A2', 'COMPANY: ' . $CompanyCode);
-                $sheet->setCellValue('K2', 'LOCATION: ' . $LocationCode);
-                $sheet->getStyle('A2:K2')->applyFromArray([
+                $sheet->setCellValue('J2', 'LOCATION: ' . $LocationCode);
+                $sheet->getStyle('A2:J2')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 10],
                 ]);
 
@@ -2109,14 +2233,11 @@ class Reports extends CI_Controller
                     ->setCellValue('G3', 'IN Time')
                     ->setCellValue('H3', 'OUT Time')
                     ->setCellValue('I3', 'E-Master Close')
-                    ->setCellValue('J3', 'Time Difference')
-                    ->setCellValue('K3', 'Working Hours');
+                    ->setCellValue('J3', 'Working Hours');
 
-                $sheet->getStyle('A3:K3')->applyFromArray([
+                $sheet->getStyle('A3:J3')->applyFromArray([
                     'font' => ['bold' => true],
-                    'alignment' => [
-                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                    ],
+                    'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
                     'borders' => [
                         'allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN],
                     ],
@@ -2128,41 +2249,40 @@ class Reports extends CI_Controller
 
                 foreach ($OT_Hours_Employee_Download as $data) {
                     $sheet->setCellValue('A' . $rowNumber, $serial++)
-                        ->setCellValue('B' . $rowNumber, $Date)
-                        ->setCellValue('C' . $rowNumber, $data['Previous Shift'])
-                        ->setCellValue('D' . $rowNumber, $data['Current Shift'])
-                        ->setCellValue('E' . $rowNumber, $data['EmpNo'])
-                        ->setCellValue('F' . $rowNumber, $data['Employee Name'])
-                        ->setCellValue('G' . $rowNumber, $data['IN Time'])
-                        ->setCellValue('H' . $rowNumber, $data['IN OUT'])
-                        ->setCellValue('I' . $rowNumber, $data['Updated_Time'])
-                        ->setCellValue('J' . $rowNumber, $data['Diffrence'])
-                        ->setCellValue('K' . $rowNumber, $data['W.Hours']);
+                        ->setCellValue('B' . $rowNumber, $data['Date'] ?? '')
+                        ->setCellValue('C' . $rowNumber, $data['Shift'] ?? '')
+                        ->setCellValue('D' . $rowNumber, $data['Next_Shift'] ?? '')
+                        ->setCellValue('E' . $rowNumber, $data['Employee_ID'] ?? '')
+                        ->setCellValue('F' . $rowNumber, $data['Employee_Name'] ?? '')
+                        ->setCellValue('G' . $rowNumber, $data['In_Time'] ?? '')
+                        ->setCellValue('H' . $rowNumber, $data['Out_Time'] ?? '')
+                        ->setCellValue('I' . $rowNumber, $data['E_Master_Closing'] ?? '')
+                        ->setCellValue('J' . $rowNumber, number_format((float)($data['OT_Hour'] ?? 0), 2));
                     $rowNumber++;
                 }
 
                 // Auto-size columns
-                foreach (range('A', 'K') as $col) {
+                foreach (range('A', 'J') as $col) {
                     $sheet->getColumnDimension($col)->setAutoSize(true);
                 }
 
-                // Create directory if not exists
+                // Create folder if not exists
                 $reportPath = 'assets/reports/';
                 if (!file_exists($reportPath)) {
                     mkdir($reportPath, 0777, true);
                 }
 
-                $currentDate = date('Y-m-d_H-i-s');
-                $fileName = 'Employee_OT_Hours_' . $currentDate . '.xlsx';
+                $Dates = date('d-m-Y', strtotime($Date)); // Safe for filenames
+                $fileName = 'Employee_OT_Hours_' . $Dates . '.xlsx';
                 $filePath = $reportPath . $fileName;
 
-                // Save and return file path
                 $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
                 $writer->save($filePath);
 
                 echo json_encode([
-                    'Status' => 'Success',
-                    'file_url' => base_url($filePath)
+                    'Status'   => 'Success',
+                    'file_url' => base_url($filePath),
+                    'file_Name' => $fileName
                 ]);
                 return;
             } else {
@@ -2172,4 +2292,183 @@ class Reports extends CI_Controller
             redirect(base_url());
         }
     }
+
+        public function OT_Employee()
+{
+    $Session = $this->session->userdata('sess_array');
+
+    if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+        $CompanyCode = $Session['Ccode'];
+        $LocationCode = $Session['Lcode'];
+        $Login_User = $Session['UserName'];
+
+          $this->data['Favicon'] = 'Precot | OT Report';
+
+        $this->load->view('Frontend/Header',$this->data);
+            $this->load->view('Frontend/Sidebar');
+            $this->load->view('Reports/OT_Employee_List');
+            $this->load->view('Frontend/Footer');  
+    } else {
+        redirect(base_url());
+    }
+}
+
+
+public function Get_OT_Employee_List(){
+     $Session = $this->session->userdata('sess_array');
+      if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+        $CompanyCode = $Session['Ccode'];
+        $LocationCode = $Session['Lcode'];
+        $Login_User = $Session['UserName'];
+
+          $this->data['Favicon'] = 'Precot | OT Report';
+
+        if ($this->input->post()) {
+
+                $Date = $this->input->post('Date');
+                $Shift = $this->input->post('Shift');
+             
+                $this->data['Get_OT_Employee_List'] = $Get_OT_Employee_List = $this->Reports_Model->Get_OT_Employee_List($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+
+                if($Get_OT_Employee_List == 0){
+
+                    echo json_encode([
+                        'status' => 'error',
+                        'message' => 'Shift Not Starting OT Employee Details Not Found..'
+                    ]);
+
+                } else {
+
+                    echo json_encode($this->data);
+
+                }
+                
+            }
+    } else {
+        redirect(base_url());
+    }
+
+
+}
+
+
+public function OT_Employee_List_Report_Download()
+{
+    $Session = $this->session->userdata('sess_array');
+
+    if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+
+        $CompanyCode = $Session['Ccode'];
+        $LocationCode = $Session['Lcode'];
+        $Login_User = $Session['UserName'];
+
+        if ($this->input->post()) {
+
+            $Date = $this->input->post('Date');
+            $Shift = $this->input->post('Shift');
+         $Get_OT_Employee_List = $this->Reports_Model->Get_OT_Employee_List($CompanyCode, $LocationCode, $Login_User,$Date, $Shift);
+         if (empty($Get_OT_Employee_List)) {
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => 'Shift Not Starting Employee Details Not Found..'
+                ]);
+                exit;
+            }
+
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+
+            $mainHeading = 'OT Employee List';
+            $sheet->mergeCells('A1:J1');
+            $sheet->setCellValue('A1', $mainHeading);
+            $sheet->getStyle('A1')->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'size' => 16,
+                ],
+                'alignment' => [
+                    'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                    'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                ],
+            ]);
+            $sheet->getRowDimension('1')->setRowHeight(30);
+
+            $sheet->setCellValue('A2', 'COMPANY: ' . $CompanyCode)
+                ->setCellValue('A3', 'LOCATION: ' . $LocationCode)
+                ->setCellValue('I2', 'SHIFT: ' . $Shift)
+                ->setCellValue('I3', 'DATE: ' . $Date);
+
+            $sheet->getStyle('I2:I3')->applyFromArray([
+                'font' => ['bold' => true],
+            ]);
+            $sheet->getStyle('A2:A3')->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'size' => 10,
+                ],
+            ]);
+
+            $sheet->setCellValue('A6', 'Ccode')
+                ->setCellValue('B6', 'Lcode')
+                ->setCellValue('C6', 'Sub Department')
+                ->setCellValue('D6', 'Position')
+                ->setCellValue('E6', 'EmpNo')
+                ->setCellValue('F6', 'First Name')
+                ->setCellValue('G6', 'Previous Shift')
+                ->setCellValue('H6', 'Frame')
+                ->setCellValue('I6', 'Machine_Id');
+                
+            $sheet->getStyle('A6:I6')->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'size' => 10,
+                ],
+                'alignment' => [
+                    'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                    'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    ],
+                ],
+            ]);
+
+            $rowNumber = 7;
+            foreach ($Get_OT_Employee_List as $data) {
+                $sheet->setCellValue('A' . $rowNumber, $data->Ccode)
+                ->setCellValue('B' . $rowNumber, $data->Lcode)
+                 ->setCellValue('C' . $rowNumber, $data->Sub_Department)
+                ->setCellValue('D' . $rowNumber, $data->WorkArea)
+                    ->setCellValue('E' . $rowNumber, $data->EmpNo)
+                    ->setCellValue('F' . $rowNumber, $data->FirstName)
+                    ->setCellValue('G' . $rowNumber, $data->Previous_Shift)
+                    ->setCellValue('H' . $rowNumber, $data->Frame)
+                    ->setCellValue('I' . $rowNumber, $data->Machine_Id);
+                $rowNumber++;
+            }
+
+            foreach (range('A', 'H') as $col) {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $currentDate = date('Y-m-d');
+            $directory = 'assets/reports';
+
+            if (!is_dir($directory)) {
+                mkdir($directory, 0777, true);
+            }
+
+            $file_path = $directory . '/OT_Employee_List_' . $currentDate . '.xlsx';
+            $writer->save($file_path);
+
+            echo json_encode(['file_url' => base_url($file_path)]);
+            exit;
+        }
+    } else {
+        redirect(base_url(), 'refresh');
+    }
+}
+
 }

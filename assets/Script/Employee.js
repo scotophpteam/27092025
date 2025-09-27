@@ -18,7 +18,7 @@ $(document).ready(function () {
   });
 
   var currentDate = new Date().toISOString().split("T")[0];
-  $("#Date").val('2025-06-03');
+  $("#Date").val(currentDate);
   $("#Date").attr("max", currentDate);
 
 
@@ -45,8 +45,11 @@ $(document).ready(function () {
   var Manual_Attendance_Entry_Screen = $("#Manual_Attendance_Entry_Screen").val();
   var Punching_Attendance_Report = $("#Punching_Attendance_Report").val();
   var Employee_Punching_List_Screen = $("#Employee_Punching_List_Screen").val();
+  var Employee_Punching_List_Details_Screen = $("#Employee_Punching_List_Details_Screen").val();
 
   if (Manual_Attendance_Entry_Screen == "Manual_Attendance_Entry_Screen") {
+
+
     $.ajax({
       url: baseurl + "Employee/Shift_Details",
       type: "POST",
@@ -1007,6 +1010,39 @@ $(document).ready(function () {
       $(this).next(".error-text").remove();
     });
 
+    $("#Date").on("change", function () {
+
+      $.ajax({
+        url: baseurl + "Employee/Shift_Employee_List",
+        type: "POST",
+        data: {
+          Shift: $("#Shift").val(),
+          Date: $("#Date").val(),
+        },
+        success: function (response) {
+          var Response_Data = JSON.parse(response);
+          var Shift_Employee_List = Response_Data.Shift_Employee_List;
+
+          $("#Employee_Id").empty();
+
+          for (var i = 0; i < Shift_Employee_List.length; i++) {
+            var item = Shift_Employee_List[i];
+            var machineID = item.MachineID;
+            var firstName = item.FirstName;
+
+            $("#Employee_Id").append(
+              $("<option></option>")
+                .attr("value", machineID)
+                .text(machineID + " - " + firstName)
+            );
+          }
+        },
+      });
+    })
+
+
+
+
     //===========================================================================================================================//
   } else if (Punching_Attendance_Report == "Punching_Attendance_Report") {
     $("#Employee_Punching_List_Table_Section").hide();
@@ -1091,9 +1127,8 @@ $(document).ready(function () {
                         <td>${item.WorkArea}</td>
                         <td>${item.MachineID}</td>
                         <td>${item.FirstName}</td>
-                        <td><span class="${badgeClass}">${
-                  item.Get_Type
-                }</span></td>
+                        <td><span class="${badgeClass}">${item.Get_Type
+                  }</span></td>
                     </tr>`;
 
                 $("#Employee_Punching_LoginIn_Table tbody").append(row);
@@ -1151,9 +1186,8 @@ $(document).ready(function () {
                       <td>${item.WorkArea}</td>
                       <td>${item.MachineID}</td>
                       <td>${item.FirstName}</td>
-                      <td><span class="${badgeClass}">${
-                item.Get_Type
-              }</span></td>
+                      <td><span class="${badgeClass}">${item.Get_Type
+                }</span></td>
                   </tr>`;
 
               $("#Employee_Punching_LoginIn_Table tbody").append(row);
@@ -1209,9 +1243,8 @@ $(document).ready(function () {
                       <td>${item.WorkArea}</td>
                       <td>${item.MachineID}</td>
                       <td>${item.FirstName}</td>
-                      <td><span class="${badgeClass}">${
-                item.Get_Type
-              }</span></td>
+                      <td><span class="${badgeClass}">${item.Get_Type
+                }</span></td>
                   </tr>`;
 
               $("#Employee_Punching_LoginIn_Table tbody").append(row);
@@ -1267,9 +1300,8 @@ $(document).ready(function () {
                       <td>${item.WorkArea}</td>
                       <td>${item.MachineID}</td>
                       <td>${item.FirstName}</td>
-                      <td><span class="${badgeClass}">${
-                item.Get_Type
-              }</span></td>
+                      <td><span class="${badgeClass}">${item.Get_Type
+                }</span></td>
                   </tr>`;
               table.row.add($(row)[0]);
               $("#Employee_Punching_LoginIn_Table tbody").append(row);
@@ -1325,7 +1357,7 @@ $(document).ready(function () {
 
     //===========================================================================================================================//
   } else if (
-    (Employee_Punching_List_Screen = "Employee_Punching_List_Screen")
+    (Employee_Punching_List_Screen == "Employee_Punching_List_Screen")
   ) {
     $("#Employee_Punching_List_Table_Section").hide();
 
@@ -1355,9 +1387,9 @@ $(document).ready(function () {
       },
     });
 
+
+
     $("#Employee_Punching_List_View").on("click", function () {
-
-
       var Date = $("#Date").val();
       var Shift = $("#Shift").val();
 
@@ -1385,6 +1417,7 @@ $(document).ready(function () {
             let allEmpty = true;
             let completedCount = 0;
             let missedCount = 0;
+            let manualAttendanceCount = 0;
 
             $("#Employee_Punching_List_Table_Section").show();
             $("#Employee_Punching_List_Down_Btn").show();
@@ -1392,48 +1425,66 @@ $(document).ready(function () {
             table.clear().draw();
 
             $.each(Get_Punching_List, function (index, item) {
-              let nullCount = 0;
-              if (!item.Day_In) nullCount++;
-              if (!item.Break_IN) nullCount++;
-              if (!item.Break_Out) nullCount++;
+              let hasDayIn = !!item.Day_In;
+              let hasBreakOut = !!item.Break_Out;
+              let hasBreakIn = !!item.Break_IN;
+              let hasDayOut = !!item.Day_Out;
 
-              if (item.Day_In || item.Break_IN || item.Break_Out) {
+              let allPunchesComplete = hasDayIn && hasBreakOut && hasBreakIn && hasDayOut;
+              let isManualAttendance = hasDayIn && hasDayOut && !hasBreakOut && !hasBreakIn;
+
+              let nullCount = 0;
+              if (!hasDayIn) nullCount++;
+              if (!hasBreakOut) nullCount++;
+              if (!hasBreakIn) nullCount++;
+              if (!hasDayOut) nullCount++;
+
+              if (hasDayIn || hasBreakOut || hasBreakIn || hasDayOut) {
                 allEmpty = false;
               }
 
-              // Count logic
-              if (nullCount === 0) {
+              if (allPunchesComplete) {
                 completedCount++;
-              } else {
+              } else if (isManualAttendance) {
+                manualAttendanceCount++;
+                missedCount++;
+              } else if (nullCount > 0) {
                 missedCount++;
               }
 
-              let cellColor = nullCount === 0 ? "#93FD95" : "#FD9393";
+              let cellColor = (value) => {
+                if (!value) return "#FD9393"; // red for missing
+                if (allPunchesComplete) return "#93FD95"; // green
+                if (isManualAttendance) return "orange"; // orange for manual
+                return "#FD9393"; // red default
+              };
+
               let statusBadge =
                 nullCount === 0
                   ? `<span class="badge badge-success">Done</span>`
                   : `<span class="badge badge-danger">Not-Done</span>`;
 
               var row = `
-                <tr>
-                  <td>${index + 1}</td>
-                  <td>${item.MachineID}</td>
-                  <td>${item.EmpName}</td>
-                  <td>${item.WorkArea}</td>
-                  <td style="background-color: ${cellColor};">${item.Day_In || ""}</td>
-                  <td style="background-color: ${cellColor};">${item.Break_Out || ""}</td>
-                  <td style="background-color: ${cellColor};">${item.Break_IN || ""}</td>
-                  <td>${statusBadge}</td>
-                </tr>`;
+            <tr>
+              <td>${index + 1}</td>
+              <td>${item.MachineID}</td>
+              <td>${item.EmpName}</td>
+              <td>${item.WorkArea}</td>
+              <td style="background-color: ${cellColor(item.Day_In)};">${item.Day_In || ""}</td>
+              <td style="background-color: ${cellColor(item.Break_Out)};">${item.Break_Out || ""}</td>
+              <td style="background-color: ${cellColor(item.Break_IN)};">${item.Break_IN || ""}</td>
+              <td style="background-color: ${cellColor(item.Day_Out)};">${item.Day_Out || ""}</td>
+              <td>${statusBadge}</td>
+            </tr>`;
 
               table.row.add($(row));
             });
 
             table.draw();
 
-            // Update the counts
-            $("#Completed_Punching_List").text('Completed Punching : ' + completedCount);
-            $("#Missed_Punching_List").text('Missed Punching : ' + missedCount);
+            $("#Completed_Punching_List").text("Completed Punching: " + completedCount);
+            $("#Missed_Punching_List").text("Missed Punching: " + missedCount);
+            $("#Manual_Attendance_List").text("Manual Attendance: " + manualAttendanceCount);
 
             if (allEmpty) {
               $("#Employee_Punching_List_Table_Section").hide();
@@ -1446,10 +1497,14 @@ $(document).ready(function () {
               });
             }
           }
-        }
-        ,
+        },
       });
     });
+
+
+
+
+
 
     $("#Employee_Punching_List_Down_Btn").on("click", function () {
       var Date = $("#Date").val();
@@ -1478,5 +1533,298 @@ $(document).ready(function () {
         },
       });
     });
+
+
+
+  } else if (Employee_Punching_List_Details_Screen == 'Employee_Punching_List_Details_Screen') {
+
+
+    $("#Employee_Punching_List_Table_Section").hide();
+
+
+    $.ajax({
+      url: baseurl + "Employee/Shift_Details",
+      type: "POST",
+      success: function (response) {
+        var Response_Data = JSON.parse(response);
+        var Shift_Details = Response_Data.Shift_Details;
+
+        var Shift = { "": "" };
+
+        for (var i = 0; i < Shift_Details.length; i++) {
+          var DName = Shift_Details[i];
+          Shift[DName.ShiftDesc] = DName.ShiftDesc;
+        }
+
+        $("#Shift").empty();
+
+        $.each(Shift, function (index, value) {
+          $("#Shift").append(
+            $("<option></option>").attr("value", value).text(value)
+          );
+        });
+
+        $("#Shift option:eq(1)").prop("selected", true);
+      },
+    });
+
+
+    $("#Employee_Punching_List_View").on("click", function () {
+      var Date = $("#Date").val();
+      var Shift = $("#Shift").val();
+
+      $.ajax({
+        url: baseurl + "Employee/Get_Punching_List_Details",
+        type: "POST",
+        data: {
+          Date,
+          Shift,
+        },
+        success: function (response) {
+          var Response_Data = JSON.parse(response);
+          var Get_Punching_List = Response_Data.Get_Punching_List_Details;
+
+          if (Response_Data.status == "error") {
+            swal({
+              type: "warning",
+              title: "Warning",
+              text: Response_Data.message,
+            });
+
+            $("#Employee_Punching_List_Table_Section").hide();
+            $("#Employee_Punching_List_Down_Btn").hide();
+          } else {
+            let allEmpty = true;
+            let completedCount = 0;
+            let missedCount = 0;
+            let manualAttendanceCount = 0;
+
+            $("#Employee_Punching_List_Table_Section").show();
+            $("#Employee_Punching_List_Down_Btn").show();
+
+            table.clear().draw();
+
+            $.each(Get_Punching_List, function (index, item) {
+              let hasDayIn = !!item.Day_In;
+              let hasBreakOut = !!item.Break_Out;
+              let hasBreakIn = !!item.Break_IN;
+              let hasDayOut = !!item.Day_Out;
+
+              let allPunchesComplete = hasDayIn && hasBreakOut && hasBreakIn && hasDayOut;
+              let isManualAttendance = hasDayIn && hasDayOut && !hasBreakOut && !hasBreakIn;
+
+              let nullCount = 0;
+              if (!hasDayIn) nullCount++;
+              if (!hasBreakOut) nullCount++;
+              if (!hasBreakIn) nullCount++;
+              if (!hasDayOut) nullCount++;
+
+              if (hasDayIn || hasBreakOut || hasBreakIn || hasDayOut) {
+                allEmpty = false;
+              }
+
+              if (allPunchesComplete) {
+                completedCount++;
+              } else if (isManualAttendance) {
+                manualAttendanceCount++;
+                missedCount++;
+              } else if (nullCount > 0) {
+                missedCount++;
+              }
+
+              let rowBgColor = "";
+              if (allPunchesComplete) {
+                rowBgColor = "background-color: #93FD95;";
+              } else if (isManualAttendance) {
+                rowBgColor = "background-color: orange;";
+              } else {
+                rowBgColor = "background-color: #FD9393;";
+              }
+
+              let cellColor = nullCount === 0 ? "#93FD95" : "#FD9393";
+              let statusBadge =
+                nullCount === 0
+                  ? `<span class="badge badge-success">Done</span>`
+                  : `<span class="badge badge-danger">Not-Done</span>`;
+
+              var row = `
+            <tr style="${rowBgColor}">
+              <td>${index + 1}</td>
+              <td>${item.MachineID}</td>
+              <td>${item.EmpName}</td>
+              <td>${item.WorkArea}</td>
+              <td style="background-color: ${cellColor};">${item.Day_In || ""}</td>
+              <td style="background-color: ${cellColor};">${item.Break_Out || ""}</td>
+              <td style="background-color: ${cellColor};">${item.Break_IN || ""}</td>
+              <td style="background-color: ${cellColor};">${item.Day_Out || ""}</td>
+              <td>${statusBadge}</td>
+            </tr>`;
+
+              table.row.add($(row));
+            });
+
+            table.draw();
+
+            $("#Completed_Punching_List").text("Completed Punching: " + completedCount);
+            $("#Missed_Punching_List").text("Missed Punching: " + missedCount);
+            $("#Manual_Attendance_List").text("Manual Attendance: " + manualAttendanceCount);
+
+            if (allEmpty) {
+              $("#Employee_Punching_List_Table_Section").hide();
+              $("#Employee_Punching_List_Down_Btn").hide();
+
+              swal({
+                type: "warning",
+                title: "Warning",
+                text: "Shift Not Starting Employee Details Not Found..",
+              });
+            }
+          }
+        },
+      });
+    });
+
+
+
+
+
+
+    // $("#Employee_Punching_List_View").on("click", function () {
+    //   var Date = $("#Date").val();
+    //   var Shift = $("#Shift").val();
+
+    //   $.ajax({
+    //     url: baseurl + "Employee/Get_Punching_List_Details",
+    //     type: "POST",
+    //     data: {
+    //       Date,
+    //       Shift,
+    //     },
+    //     success: function (response) {
+    //       var Response_Data = JSON.parse(response);
+    //       var Get_Punching_List = Response_Data.Get_Punching_List_Details;
+
+    //       if (Response_Data.status == "error") {
+    //         swal({
+    //           type: "warning",
+    //           title: "Warning",
+    //           text: Response_Data.message,
+    //         });
+
+    //         $("#Employee_Punching_List_Table_Section").hide();
+    //         $("#Employee_Punching_List_Down_Btn").hide();
+    //       } else {
+    //         let allEmpty = true;
+    //         let completedCount = 0;
+    //         let missedCount = 0;
+    //         let manualAttendanceCount = 0;
+
+    //         $("#Employee_Punching_List_Table_Section").show();
+    //         $("#Employee_Punching_List_Down_Btn").show();
+
+    //         table.clear().draw();
+
+    //         $.each(Get_Punching_List, function (index, item) {
+    //           let nullCount = 0;
+
+    //           if (!item.Day_In) nullCount++;
+    //           if (!item.Break_IN) nullCount++;
+    //           if (!item.Break_Out) nullCount++;
+    //           if (!item.Day_Out) nullCount++;
+
+    //           if (nullCount === 0) {
+    //             completedCount++;
+    //             return true;
+    //           }
+
+    //           missedCount++;
+
+    //           let isManualAttendance = item.Day_In && item.Day_Out && !item.Break_IN && !item.Break_Out;
+    //           if (isManualAttendance) {
+    //             manualAttendanceCount++;
+    //           }
+
+    //           let rowBgColor = isManualAttendance ? "background-color: orange;" : "";
+    //           let cellColor = nullCount === 0 ? "#93FD95" : "#FD9393";
+    //           let statusBadge =
+    //             nullCount === 0
+    //               ? `<span class="badge badge-success">Done</span>`
+    //               : `<span class="badge badge-danger">Not-Done</span>`;
+
+    //           var row = `
+    //         <tr style="${rowBgColor}">
+    //           <td class="serial-number"></td>
+    //           <td>${item.MachineID}</td>
+    //           <td>${item.EmpName}</td>
+    //           <td>${item.WorkArea}</td>
+    //           <td style="background-color: ${cellColor};">${item.Day_In || ""}</td>
+    //           <td style="background-color: ${cellColor};">${item.Break_Out || ""}</td>
+    //           <td style="background-color: ${cellColor};">${item.Break_IN || ""}</td>
+    //           <td style="background-color: ${cellColor};">${item.Day_Out || ""}</td>
+    //           <td>${statusBadge}</td>
+    //         </tr>`;
+
+    //           table.row.add($(row));
+    //         });
+
+    //         table.rows().every(function (rowIdx) {
+    //           $(this.node()).find('.serial-number').text(rowIdx + 1);
+    //         });
+
+    //         table.draw();
+
+    //         $("#Completed_Punching_List").text("Completed Punching : " + completedCount);
+    //         $("#Missed_Punching_List").text("Missed Punching : " + missedCount);
+    //         $("#Manual_Attendance_List").text("Manual Attendance : " + manualAttendanceCount);
+
+    //         if (missedCount === 0) {
+    //           $("#Employee_Punching_List_Table_Section").hide();
+    //           $("#Employee_Punching_List_Down_Btn").hide();
+
+    //           swal({
+    //             type: "warning",
+    //             title: "Warning",
+    //             text: "No Missing Punching Data Found...",
+    //           });
+    //         }
+    //       }
+    //     },
+    //   });
+    // });
+
+
+    $("#Employee_Punching_List_Down_Btn").on("click", function () {
+      var Date = $("#Date").val();
+      var Shift = $("#Shift").val();
+
+      $.ajax({
+        url: baseurl + "Reports/Employee_Punching_List_Download_Login_Det",
+        type: "POST",
+        data: {
+          Date,
+          Shift,
+        },
+        success: function (response) {
+          var Response_Data = JSON.parse(response);
+
+          if (Response_Data.file_url) {
+            var link = document.createElement("a");
+            link.href = Response_Data.file_url;
+            link.download = currentDate + " Employee Punching Details.xlsx";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          } else {
+            alert("Failed to generate the report");
+          }
+        },
+      });
+    });
+
+
+
+
   }
+
+
 });

@@ -115,7 +115,7 @@
 
             <div class="pd-5 card-box mb-30">
                 <div class="pd-5">
-                    <h4 class="text-black h5 text-center">Extra Employee Work Assignment</h4>
+                    <h4 class="text-black h5 text-center">Extra Hours Employee Work Assignment</h4>
                 </div>
 
                 <form method="POST" enctype="multipart/form-data">
@@ -135,6 +135,7 @@
 
                         <div class="col-md-3 d-flex align-items-end" style="margin-bottom: 27px;">
                             <input type="hidden" name="Type" id="Type" value="EXTRA">
+                            <input type="hidden" id="Assign_Type" value="EXTRA">
                             <input type="hidden" value="Extra_Assign" id="Allocation_Screen_Type">
 
                         </div>

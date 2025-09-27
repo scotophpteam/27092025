@@ -338,6 +338,7 @@ WHERE Log.UserID = '$Login_User'
                     AND Stand.Lcode = '$LocationCode'
                     AND Stand.Shift = '$Shift'";
 
+
         $query = $this->db->query($sql);
         $Standard_Data = $query->result();
 
@@ -349,6 +350,7 @@ WHERE Log.UserID = '$Login_User'
         $result = [];
 
         foreach ($Standard_Data as $Data) {
+
             $Department = $Data->Department;
             $Sub_Department = $Data->Sub_Department;
             $Position = $Data->Position;
@@ -361,11 +363,12 @@ WHERE Log.UserID = '$Login_User'
                                     AND Lcode = '$LocationCode'
                                     AND Date = '$Date'
                                     AND Shift = '$Shift'
-                                    AND Department = '$Department'
                                     AND Sub_Department = '$Sub_Department'
                                     AND WorkArea = '$Position'
                                     AND Assign_Status = '1'
                                     AND Work_Status = '1'";
+
+                                                        
 
             $employee_query = $this->db->query($Employee_Details_Sql);
             $Actual_Count = $employee_query->num_rows();
@@ -624,6 +627,7 @@ WHERE Log.UserID = '$Login_User'
         $sql = "SELECT Emp.EmpNo,Emp.FirstName FROM UserDetails_Det Login INNER JOIN Employee_Mst Emp ON Login.Lcode = Emp.LocCode AND Login.Ccode = Emp.CompCode AND Login.Name = Emp.DeptName AND Emp.wages = 'STAFF' AND Login.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode' AND Login.UserID = '$Login_User'";
         $query = $this->db->query($sql);
         $result = $query->result();
+
 
         $Check_Rows = $query->num_rows();
 

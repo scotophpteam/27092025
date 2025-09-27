@@ -23,6 +23,8 @@ class  Authorization_model extends CI_Model
         ---ND A.UserType = 'HR User'";
 
 
+
+
         $query = $this->db->query($sql);
 
 

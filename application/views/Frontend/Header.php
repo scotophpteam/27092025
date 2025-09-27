@@ -71,7 +71,7 @@
         <!-- Center: Title -->
         <div class="flex-grow-1 text-center">
             <!-- <h4 class="mb-0" style="color: white; font-family: EB Garamond ">WORK ALLOCATION MANAGEMENT</h4> -->
-            <h4 class="mb-0" style="color: white; font-family: EB Garamond ">Work Allocation Management</h4>
+            <h5 class="mb-0" style="color: white; font-family: EB Garamond ">Work Allocation Management</h5>
 
         </div>
 
@@ -142,7 +142,10 @@
                 }
             });
         });
+
     </script>
+
+    
 
     <!-- JS Scripts -->
     <script src="<?php echo base_url('assets/vendors/scripts/core.js') ?>"></script>

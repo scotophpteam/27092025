@@ -86,8 +86,10 @@
                             <div class="form-group">
                                 <label>Type</label>
                                 <select class="custom-select2 form-control" name="Type" id="Type">
-                                    <option value="EXTRA">EXTRA</option>
+                                    <option value="NOWORK">NOWORK</option>
                                     <option value="OT">OT</option>
+                                    <option value="EXTRA">EXTRA</option>
+
                                 </select>
                                 <span class="text-danger"><?php echo form_error('Type'); ?></span>
                             </div>
@@ -132,15 +134,14 @@
                             <thead style="background-color: #519352; color: white;">
                                 <tr>
                                     <th>#</th>
-                                    <th class="Employee_Id">Employee Id</th>
-                                    <th class="Employee_Name">Employee Name</th>
-                                    <th class="WorkArea">Status</th>
-                                    <th class="WorkArea">IN Time</th>
-                                    <th class="WorkArea">IN OUT</th>
+                                    <th>Employee Id</th>
+                                    <th>Employee Name</th>
+                                    <th>IN Time</th>
+                                    <th>IN OUT</th>
+                                    <th>E-Master Closing</th>
+                                    <th>Actual/E-Master</th>
                                     <th>W.Hours</th>
-                                    <th class="WorkArea">E-Master</th>
-                                    <th>Difference</th>
-                                    <th>Verify</th>
+                                    <th>Actual Working Time</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -157,15 +158,14 @@
                             <thead style="background-color: #519352; color: white;">
                                 <tr>
                                     <th>#</th>
-                                    <th class="Employee_Id">Employee Id</th>
-                                    <th class="Employee_Name">Employee Name</th>
-                                    <th class="WorkArea">Status</th>
-                                    <th class="WorkArea">IN Time</th>
-                                    <th class="WorkArea">IN OUT</th>
-                                    <th>W.Hours</th>
-                                    <th class="WorkArea">E-Master</th>
-                                    <th>Difference</th>
-                                    <th>Verify</th>
+                                    <th>Employee Id</th>
+                                    <th>Employee Name</th>
+                                    <th>IN Time</th>
+                                    <th>IN OUT</th>
+                                    <th>E-Master Closing</th>
+                                    <th>Working Hours</th>
+                                    <th>OT Working Hour</th>
+                                    <th>OT Hour</th>
                                     <th>Update</th>
                                 </tr>
                             </thead>
@@ -175,9 +175,37 @@
                         </table>
                     </div>
                 </div>
+
+
+
+                <!-- No Work Employees  Section -->
+                <div class="container-fluid mt-3 table-container" id="ON_Work_Employee_List_Update_Section" style="display:none">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="ON_Work_Employee_List">
+                            <thead style="background-color: #519352; color: white;">
+                                <tr>
+                                    <th>#</th>
+                                    <th class="Employee_Id">Employee Id</th>
+                                    <th class="Employee_Name">Employee Name</th>
+                                    <th class="WorkArea">E-Master Closing</th>
+                                    <th class="WorkArea">IN Time</th>
+                                    <th class="WorkArea">IN OUT</th>
+                                    <th>Attendance</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dynamic rows go here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+
             </div>
         </div>
-    </div>
-</div>
+        <!-- </div>
+</div> -->
 
-<script src="<?php echo base_url('assets/Script/OT.js') ?>"></script>
+        <script src="<?php echo base_url('assets/Script/OT.js') ?>"></script>

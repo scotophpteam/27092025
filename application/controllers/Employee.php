@@ -366,4 +366,85 @@ class Employee extends CI_Controller
         }
 
     }
+
+    public function Details_Punching_List()
+    {
+
+        $Session = $this->session->userdata('sess_array');
+        if (!empty($Session) && isset($Session['IsOnLogin']) &&  $Session['IsOnLogin'] === TRUE) {
+
+            $this->data['Favicon'] = 'Precot | Employee Punching Details';
+
+            $CompanyCode =  $Session['Ccode'];
+            $LocationCode =  $Session['Lcode'];
+            $Login_User =  $Session['UserName'];
+
+            if ($this->input->post()) {
+
+                $Date = $this->input->post('Date');
+                $Shift = $this->input->post('Shift');
+                $Punching_Type = $this->input->post('Punching_Type');
+
+                $this->data['Employee_Punching_List'] = $Employee_Punching_List = $this->Employee_Model->Employee_Punching_List($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Punching_Type);
+
+                if ($Employee_Punching_List == 0) {
+
+                    $Response = [
+                        'Status' => 'Error',
+                        'Message' => 'Employee Details Not Found.'
+                    ];
+
+                    echo json_encode($Response);
+                } else {
+                }
+                exit();
+            }
+
+            $this->load->view('Frontend/Header', $this->data);
+            $this->load->view('Frontend/Sidebar');
+            $this->load->view('Attendance/Employee_Punching_Details', $this->data);
+            $this->load->view('Frontend/Footer');
+        } else {
+            redirect(base_url(), 'refresh');
+        }
+    }
+
+
+       public function Get_Punching_List_Details(){
+
+        $Session = $this->session->userdata('sess_array');
+        if (!empty($Session) && isset($Session['IsOnLogin']) &&  $Session['IsOnLogin'] === TRUE) {
+
+            $this->data['Favicon'] = '';
+
+            $CompanyCode =  $Session['Ccode'];
+            $LocationCode =  $Session['Lcode'];
+            $Login_User =  $Session['UserName'];
+
+            if ($this->input->post()) {
+
+                $Date = $this->input->post('Date');
+                $Shift = $this->input->post('Shift');
+                
+                $this->data['Get_Punching_List_Details'] = $Get_Punching_List_Details = $this->Employee_Model->Employee_Punching_List_Download_Login_Det($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+
+                if($Get_Punching_List_Details == 0){
+
+                    echo json_encode([
+                        'status' => 'error',
+                        'message' => 'Shift Not Starting Employee Details Not Found..'
+                    ]);
+
+                } else {
+
+                    echo json_encode($this->data);
+
+                }
+                
+            }
+        } else {
+            redirect(base_url(), 'refresh');
+        }
+
+    }
 }

@@ -6,6 +6,15 @@ $(document).ready(function () {
   $("#Date").val(currentDate);
   $("#Date").attr("max", currentDate);
 
+var table = $("#OT_Employee_Report_Table").DataTable({
+ paging: false,
+ lengthChange: false,
+ searching: true,
+ ordering: true,
+ info: true,
+ autoWidth: true,
+ });
+
   $("#Reports_For_Allocation").hide();
 
   $("#Work_Allocation_List_Container").hide();
@@ -440,9 +449,8 @@ $(document).ready(function () {
                                <td>${item.EmpNo}</td>
                             <td>${item.FirstName}</td>
                             <td>${item.Department}</td>
-                                                        <td>${
-                                                          item.Sub_Department
-                                                        }</td>
+                                                        <td>${item.Sub_Department
+                  }</td>
 
                             <td>${item.WorkArea}</td>
                             <td>${item.Job_Card_No}</td>
@@ -504,9 +512,8 @@ $(document).ready(function () {
                                <td>${item.EmpNo}</td>
                             <td>${item.FirstName}</td>
                             <td>${item.Department}</td>
-                                                        <td>${
-                                                          item.Sub_Department
-                                                        }</td>
+                                                        <td>${item.Sub_Department
+                }</td>
 
                             <td>${item.WorkArea}</td>
                             <td>${item.Job_Card_No}</td>
@@ -629,9 +636,8 @@ $(document).ready(function () {
                             <td>${index + 1}</td>
                               <td>${item.EmpNo}</td>
                             <td>${item.FirstName}</td>
-                                                        <td>${
-                                                          item.Sub_Department
-                                                        }</td>
+                                                        <td>${item.Sub_Department
+                }</td>
 
                             <td>${item.WorkArea}</td>
                             <td><span class="badge ${badgeClass}">${closingStatus}</span></td>
@@ -691,9 +697,8 @@ $(document).ready(function () {
                   <td>${index + 1}</td>
                     <td>${item.EmpNo}</td>
                   <td>${item.FirstName}</td>
-                  <td>${
-                    item.Sub_Department
-                  }</td>
+                  <td>${item.Sub_Department
+                }</td>
 
                   <td>${item.WorkArea}</td>
                   <td><span class="badge ${badgeClass}">${closingStatus}</span></td>
@@ -987,4 +992,123 @@ $(document).ready(function () {
       },
     });
   });
+
+
+  $.ajax({
+    url: baseurl + "Work/Shifts",
+    type: "POST",
+    success: function (response) {
+      var responseData = JSON.parse(response);
+      var Shifts = responseData.Shifts;
+      var Shift = {};
+
+      Shifts.forEach(function (DName) {
+        Shift[DName.ShiftDesc] = DName.ShiftDesc;
+      });
+
+      $.each(Shift, function (index, value) {
+        $("#Sel_Shift").append(
+          $("<option></option>").attr("value", value).text(value)
+        );
+      });
+
+      $("#Sel_Shift option:first").prop("selected", true);
+    }
+  })
+
+
+  $("#OT_Employee_Report_Section").hide();
+  $("#OT_Employee_Report_Down").hide();
+  $('#OT_Employee_Report_View').on('click', function () {
+    // alert("hi")
+    var Date = $('#Date').val();
+    var Shift = $('#Sel_Shift').val();
+
+    $.ajax({
+      url: baseurl + "Reports/Get_OT_Employee_List",
+      type: 'POST',
+      data: {
+        Date,
+        Shift
+      },
+      success: function (response) {
+        var responseData = JSON.parse(response);
+        var Get_OT_Employee_List = responseData.Get_OT_Employee_List;
+
+        let continuousIndex = 1;
+
+        if (responseData.status == "error") {
+
+          swal({
+            type: "warning",
+            title: "Warning",
+            text: responseData.message,
+          });
+          $("#OT_Employee_Report_Section").hide();
+          $("#OT_Employee_Report_Down").hide();
+
+        } else {
+          let allEmpty = true;
+          let completedCount = 0;
+          let missedCount = 0;
+          let manualAttendanceCount = 0;
+          $("#OT_Employee_Report_Down").show();
+          $("#OT_Employee_Report_Table tbody").empty();
+          $("#OT_Employee_Report_Section").show();
+
+          $.each(Get_OT_Employee_List, function (index, item) {
+            var row = `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${item.WorkArea}</td>
+                            <td>${item.EmpNo}</td>
+                            <td>${item.FirstName}</td>
+                             <td>${item.Previous_Shift}</td>
+                             <td>${item.Frame}</td>
+                            <td>${item.Machine_Id}</td>
+                        </tr>
+                    `;
+            $("#OT_Employee_Report_Table tbody").append(row);
+            table.row.add($(row)).draw();
+            continuousIndex++;
+          });
+        }
+      }
+    });
+  });
+
+  $("#OT_Employee_Report_Down").on("click", function () {
+    var Date = $("#Date").val();
+    var Shift = $("#Sel_Shift").val();
+
+    // alert(Shift);   
+
+    $.ajax({
+      url: baseurl + "Reports/OT_Employee_List_Report_Download",
+      type: "POST",
+      data: {
+        Date,
+        Shift,
+      },
+      success: function (response) {
+        var Response_Data = JSON.parse(response);
+
+        if (Response_Data.file_url) {
+          var link = document.createElement("a");
+          link.href = Response_Data.file_url;
+          link.download = currentDate + "OT Employee List.xlsx";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          alert("Failed to generate the report");
+        }
+      },
+    });
+  });
+
+
+
+
+
 });

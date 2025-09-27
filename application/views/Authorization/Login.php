@@ -244,4 +244,76 @@
     });
 </script>
 
+
+
+   <!-- DELETE COOKIES  -->
+
+<script>
+function deleteAllCookies() {
+    document.cookie.split(";").forEach(function(cookie) {
+        let name = cookie.trim().split("=")[0];
+        document.cookie = name + "=; Max-Age=0; path=/";
+    });
+}
+
+$(document).ready(function () {
+
+    var currentUrl = window.location.href;
+
+    if (
+        currentUrl === "http://172.20.0.90:8080/Precot/" ||
+        currentUrl === "http://localhost/Precot/" ||
+        currentUrl == '192.168.1.4/Precot/'
+    ) {
+        var lastDeleted = localStorage.getItem("lastCookieDeleteTime");
+        var now = new Date().getTime();
+
+        if (!lastDeleted || now - parseInt(lastDeleted) >= 1 * 60 * 1000) {
+
+            // alert('Delete');
+
+            deleteAllCookies();
+            localStorage.clear();
+            sessionStorage.clear();
+            localStorage.setItem("lastCookieDeleteTime", now.toString());
+        }
+    }
+});
+
+
+// $(document).ready(function () {
+
+//     var currentUrl = window.location.href;
+
+//     if (
+//         currentUrl === "http://172.20.0.90:8080/Precot/" ||
+//         currentUrl === "http://localhost/Precot/" ||
+//         currentUrl == '192.168.1.4/Precot/'
+//     ) {
+//         // Always delete cookies and storage
+//         deleteAllCookies();
+//         localStorage.clear();
+//         sessionStorage.clear();
+//     }
+
+//     function deleteAllCookies() {
+//         var cookies = document.cookie.split(";");
+//         for (var i = 0; i < cookies.length; i++) {
+//             var cookie = cookies[i];
+//             var eqPos = cookie.indexOf("=");
+//             var name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+//             document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+//         }
+//     }
+
+// });
+
+
+
+
+</script>
+
+
+
+
 </html>

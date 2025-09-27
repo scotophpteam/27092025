@@ -22,9 +22,10 @@ defined('BASEPATH') or exit('No direct script access allowed');
 | If you need to allow multiple domains, remember that this file is still
 | a PHP script and you can easily do that on your own.
 |
-// */
+*/
+// $config['base_url'] = 'http://192.168.1.4/Precot/';
 // $config['base_url'] = 'http://localhost/Precot/';
-$config['base_url'] = 'http://172.20.0.90:8080/Precot';
+$config['base_url'] = 'http://172.20.0.90:8080/Precot/';
 
 /*
 |--------------------------------------------------------------------------
@@ -296,7 +297,7 @@ $config['error_views_path'] = '';
 | application/cache/ directory.  Use a full server path with trailing slash.
 |
 */
-$config['cache_path'] = '';
+$config['cache_path'] = ''; // Leave empty to use default path (application/cache/)
 
 /*
 |--------------------------------------------------------------------------
@@ -533,3 +534,6 @@ $config['proxy_ips'] = '';
 
 
 $config['timezone'] = 'Asia/Kolkata';
+
+$autoload['libraries'] = array('database', 'session'); // keep minimal
+$autoload['helper'] = array('url'); // avoid loading all helpers

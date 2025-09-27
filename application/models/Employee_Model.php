@@ -71,8 +71,28 @@ class  Employee_Model extends CI_Model
 
             if ($shift_Data) {
 
-                $Shift_Pounch_Start = $shift_Data->StartTime;
-                $Shift_Pounch_End = $shift_Data->EndTime;
+
+                 if ($shift_Data) {
+                if ($Shift == 'SHIFT2') {
+
+                    $Shift_Pounch_Start = $shift_Data->EndIN;
+                    $Shift_Pounch_End = '17:15';
+                    $Shift_Date_Convert = $Date;
+
+                } else {
+
+                    $Shift_Pounch_Start = $shift_Data->EndIN;
+                    $Shift_Pounch_End = $shift_Data->StartTime;
+
+                }
+
+
+
+                $Shift_Pounch_Start = $shift_Data->EndIN;
+                $Shift_Pounch_Ends = $shift_Data->EndTime; // e.g., "16:30"
+                $endTime = new DateTime($Shift_Pounch_Ends);
+                $endTime->modify('-1 hour');
+                $Shift_Pounch_End = $endTime->format('H:i');
 
                 $From_Shift_Date_Convert = $Date;
                 $To_Shift_Date_Convert = $Date;
@@ -95,19 +115,24 @@ class  Employee_Model extends CI_Model
                         AND Emp.CatName != 'STAFF'
                         AND Time.CompCode = '$CompanyCode'
                         AND Time.LocCode = '$LocationCode'
-                        AND Emp.WorkArea IS NOT NULL
                         AND Emp.IsActive = 'Yes'
+
+
                         AND Time.MachineID NOT IN (
                             SELECT EmpNo
                             FROM Web_Employee_Work_Allocation_Mst
                             WHERE Lcode = '$LocationCode'
                             AND Work_Status = '1'
-                            AND CONVERT(varchar, Date, 103) = CONVERT(varchar, '$Date', 103)
                             AND Wages != 'STAFF'
+                            AND Type = 'SHIFT'
                             AND Ccode = '$CompanyCode'
                             AND Shift = '$Shift'
                             AND Date = '$Date'
                         )";
+
+                        // echo '<pre>';
+                        // print_r($sql2);
+                        // exit;
 
                 $log_Data = $this->db->query($sql2)->result();
 
@@ -121,6 +146,8 @@ class  Employee_Model extends CI_Model
             }
         }
     }
+
+}
 
 
     public function Shift_Employee_List($CompanyCode, $LocationCode, $Login_User, $Date, $Shift)
@@ -280,7 +307,7 @@ class  Employee_Model extends CI_Model
                             LastOUT lo ON lo.Existing_Code = fi.Existing_Code";
 
 
-// print_r($Sql_Get);exit;
+                // print_r($Sql_Get);exit;
 
                 $Query_Get_Punch = $this->db->query($Sql_Get);
                 $Punching_Timings = $Query_Get_Punch->result();
@@ -396,64 +423,502 @@ class  Employee_Model extends CI_Model
 
 
 
-    public function Get_Punching_List($CompanyCode, $LocationCode, $Login_User, $From_Date, $Enter_Shift)
-    {
-        $To_Date = date('Y-m-d', strtotime($From_Date . ' +1 day'));
+    // public function Get_Punching_List($CompanyCode, $LocationCode, $Login_User, $From_Date, $Enter_Shift)
+    // {
+    //     $To_Date = date('Y-m-d', strtotime($From_Date . ' +1 day'));
 
 
-        $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Enter_Shift'";
-        $shift_Data = $this->db->query($sql1)->row();
+    //     $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Enter_Shift'";
+    //     $shift_Data = $this->db->query($sql1)->row();
 
-        if ($shift_Data) {
+    //     if ($shift_Data) {
 
-            $Shift_Pounch_Start = $shift_Data->StartIN;
-            $Shift_Pounch_End = $shift_Data->EndIN;
-
-
-            $Shift_Date_Convert = $From_Date;
-
-            $Shift_Date_Conversion = ($shift_Data->StartIN_Days == 1 && $shift_Data->EndIN_Days == 1)
-                ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
-                : $Shift_Date_Convert;
-            $From_Date = $Shift_Date_Conversion;
+    //         $Shift_Pounch_Start = $shift_Data->StartIN;
+    //         $Shift_Pounch_End = $shift_Data->EndIN;
 
 
-            $Shifts = [
-                'PRECOT - A' => [
-                    'SHIFT1' => ['07:00', '10:00', '10:59', '14:01', $From_Date],
-                    'SHIFT2' => ['16:00', '18:00', '18:59', '22:31', $From_Date],
-                    'SHIFT3' => ['00:30', '02:15', '02:59', '06:31', $Shift_Date_Conversion]
-                ],
-                'PRECOT - B' => [
-                    'SHIFT1' => ['07:00', '10:00', '10:59', '14:01', $From_Date],
-                    'SHIFT2' => ['16:00', '18:00', '18:59', '22:01', $From_Date],
-                    'SHIFT3' => ['00:30', '02:15', '02:59', '06:01', $Shift_Date_Conversion]
-                ],
-                'PRECOT - C' => [
-                    'SHIFT1' => ['07:00', '10:00', '10:59', '13:01', $From_Date],
-                    'SHIFT2' => ['16:00', '18:00', '18:59', '21:31', $From_Date],
-                    'SHIFT3' => ['23:59', '02:15', '02:59', '05:31', $Shift_Date_Conversion]
-                ],
-                'PRECOT - D' => [],
-                'PRECOT - K' => [
-                    'SHIFT1' => ['05:10', '07:30', '07:59', '09:31', $From_Date],
-                    'SHIFT2' => ['13:30', '15:30', '19:29', '21:31', $From_Date],
-                    'SHIFT3' => ['21:30', '23:30', '00:01', '02:01', $From_Date]
-                ]
-            ];
+    //         $Shift_Date_Convert = $From_Date;
 
-            if (!isset($Shifts[$LocationCode][$Enter_Shift])) {
-                return [];
+    //         $Shift_Date_Conversion = ($shift_Data->StartIN_Days == 1 && $shift_Data->EndIN_Days == 1)
+    //             ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
+    //             : $Shift_Date_Convert;
+    //         $From_Date = $Shift_Date_Conversion;
+
+
+
+
+    //         $Shifts = [
+    //             'PRECOT - A' => [
+    //                 'SHIFT1' => ['07:00', '10:00', '10:59', '14:01', '16:15','16:45',  $From_Date],
+    //                 'SHIFT2' => ['16:00', '18:00', '18:59', '22:31',  $From_Date],
+    //                 'SHIFT3' => ['00:30', '02:15', '02:59', '06:31', $Shift_Date_Conversion]
+    //             ],
+    //             'PRECOT - B' => [
+    //                 'SHIFT1' => ['07:00', '10:00', '10:59', '14:01', $From_Date],
+    //                 'SHIFT2' => ['16:00', '18:00', '18:59', '22:01', $From_Date],
+    //                 'SHIFT3' => ['00:30', '02:15', '02:59', '06:01', $Shift_Date_Conversion]
+    //             ],
+    //             'PRECOT - C' => [
+    //                 'SHIFT1' => ['07:00', '10:00', '10:59', '13:01', $From_Date],
+    //                 'SHIFT2' => ['16:00', '18:00', '18:59', '21:31', $From_Date],
+    //                 'SHIFT3' => ['00:30', '02:15', '02:59', '06:31', $Shift_Date_Conversion]
+    //             ],
+    //             'PRECOT - D' => [
+    //                 'SHIFT1' => ['07:00', '10:00', '10:59', '13:01', $From_Date],
+    //                 'SHIFT2' => ['16:00', '18:00', '18:59', '21:31', $From_Date],
+    //                 'SHIFT3' => ['00:30', '02:15', '02:59', '06:31', $Shift_Date_Conversion]
+    //             ],
+    //             'PRECOT - K' => [
+    //                 'SHIFT1' => ['05:10', '07:30', '07:59', '09:31', $From_Date],
+    //                 'SHIFT2' => ['13:30', '15:30', '19:29', '21:31', $From_Date],
+    //                 'SHIFT3' => ['21:30', '23:30', '00:01', '02:01', $From_Date]
+    //             ]
+    //         ];
+
+    //         if (!isset($Shifts[$LocationCode][$Enter_Shift])) {
+    //             return [];
+    //         }
+
+    //         list($Search_From_Time, $Search_To_Time, $Break_From_Time, $Break_To_Time, $Break_Date) = $Shifts[$LocationCode][$Enter_Shift];
+
+    //         $Search_From_DateTime = "$From_Date $Search_From_Time";
+    //         $Search_To_DateTime = "$Shift_Date_Conversion $Search_To_Time";
+    //         $Break_From_DateTime = "$Break_Date $Break_From_Time";
+    //         $Break_To_DateTime = "$Break_Date $Break_To_Time";
+
+    //         $Sql = "SELECT
+    //                 E.Division AS Unit,
+    //                 E.Wages AS Category,
+    //                 E.DeptName AS Sub_Department,
+    //                 E.EmpLevel,
+    //                 E.MachineID,
+    //                 E.oldEmpno AS OLD_EmpNo,
+    //                 E.FirstName AS EmpName,
+    //                 E.WorkArea,
+    //                 E.SubSection_Name,
+    //                 FORMAT(F.TimeIN, 'HH:mm tt') AS Day_In,
+    //                 FORMAT(BO.TimeOUT, 'hh:mm tt') AS Break_Out,
+    //                 FORMAT(BI.TimeIN, 'HH:mm tt') AS Break_IN
+    //                 FORMAT(BO.TimeOUT, 'HH:mm tt') AS Day_Out
+    //             FROM
+    //                 Employee_Mst E
+    //             INNER JOIN
+    //                 UserDetails_Det Login
+    //                 ON Login.Ccode = E.CompCode
+    //                 AND Login.Lcode = E.LocCode
+    //                 AND Login.Name = E.DeptName
+    //             LEFT JOIN (
+    //                 SELECT MachineID, MIN(TimeIN) AS TimeIN
+    //                 FROM LogTime_IN
+    //                 WHERE CompCode = '$CompanyCode'
+    //                   AND LocCode = '$LocationCode'
+    //                   AND TimeIN BETWEEN '$Search_From_DateTime' AND '$Search_To_DateTime'
+    //                 GROUP BY MachineID
+    //             ) AS F ON F.MachineID = E.MachineID
+    //             LEFT JOIN (
+    //                 SELECT MachineID, MIN(TimeOUT) AS TimeOUT
+    //                 FROM LogTime_OUT
+    //                 WHERE CompCode = '$CompanyCode'
+    //                   AND LocCode = '$LocationCode'
+    //                   AND TimeOUT BETWEEN '$Break_From_DateTime' AND '$Break_To_DateTime'
+    //                 GROUP BY MachineID
+    //             ) AS BO ON BO.MachineID = E.MachineID
+    //             LEFT JOIN (
+    //                 SELECT MachineID, MIN(TimeIN) AS TimeIN
+    //                 FROM LogTime_IN
+    //                 WHERE CompCode = '$CompanyCode'
+    //                   AND LocCode = '$LocationCode'
+    //                   AND TimeIN BETWEEN '$Break_From_DateTime' AND '$Break_To_DateTime'
+    //                 GROUP BY MachineID
+    //             ) AS BI ON BI.MachineID = E.MachineID
+    //             WHERE
+    //                 E.CompCode = '$CompanyCode'
+    //                 AND E.LocCode = '$LocationCode'
+    //                 AND Login.UserID = '$Login_User'
+    //                 AND E.CatName = 'WORKER'
+    //                 AND NOT (
+    //                     F.TimeIN IS NULL
+    //                     AND BO.TimeOUT IS NULL
+    //                     AND BI.TimeIN IS NULL
+    //                 )
+    //             ORDER BY
+    //                 E.Division, E.Wages, E.DeptName, E.MachineID";
+
+    //         $Query = $this->db->query($Sql);
+
+    //         // echo '<pre>';
+    //         // print_r($Sql);
+    //         // exit;
+
+    //         if ($Query->num_rows() > 0) {
+    //             return $Query->result();
+    //         } else {
+    //             return 0;
+    //         }
+    //     }
+    // }
+
+
+// public function Get_Punching_List($CompanyCode, $LocationCode, $Login_User, $From_Date, $Enter_Shift)
+// {
+//     $To_Date = date('Y-m-d', strtotime($From_Date . ' +1 day'));
+
+//     $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Enter_Shift'";
+//     $shift_Data = $this->db->query($sql1)->row();
+
+//     if ($shift_Data) {
+//         $Shift_Pounch_Start = $shift_Data->StartIN;
+//         $Shift_Pounch_End = $shift_Data->EndIN;
+
+//         $Shift_Date_Convert = $From_Date;
+//         $Shift_Date_Conversion = ($shift_Data->StartIN_Days == 1 && $shift_Data->EndIN_Days == 1)
+//             ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
+//             : $Shift_Date_Convert;
+
+//         $From_Date = $Shift_Date_Conversion;
+
+//         $Shifts = [
+//             'PRECOT - A' => [
+//                 'SHIFT1' => ['07:00', '10:00', '10:59', '14:01', '16:15', '17:00', $From_Date],
+//                 'SHIFT2' => ['16:00', '18:00', '18:59', '22:31', '23:30', '01:15', $From_Date],
+//                 'SHIFT3' => ['00:30', '02:15', '02:59', '06:31', '07:00', '08:30', $Shift_Date_Conversion]
+//             ],
+//             'PRECOT - B' => [
+//                 'SHIFT1' => ['07:00', '10:00', '10:59', '14:01', '', '', $From_Date],
+//                 'SHIFT2' => ['16:00', '18:00', '18:59', '22:01', '', '', $From_Date],
+//                 'SHIFT3' => ['00:30', '02:15', '02:59', '06:01', '', '', $Shift_Date_Conversion]
+//             ],
+//             'PRECOT - C' => [
+//                 'SHIFT1' => ['07:00', '10:00', '10:59', '13:01', '', '', $From_Date],
+//                 'SHIFT2' => ['16:00', '18:00', '18:59', '21:31', '', '', $From_Date],
+//                 'SHIFT3' => ['00:30', '02:15', '02:59', '06:31', '', '', $Shift_Date_Conversion]
+//             ],
+//             'PRECOT - D' => [
+//                 'SHIFT1' => ['07:00', '10:00', '10:59', '13:01', '', '', $From_Date],
+//                 'SHIFT2' => ['16:00', '18:00', '18:59', '21:31', '', '', $From_Date],
+//                 'SHIFT3' => ['00:30', '02:15', '02:59', '06:31', '', '', $Shift_Date_Conversion]
+//             ],
+//             'PRECOT - K' => [
+//                 'SHIFT1' => ['05:10', '07:30', '07:59', '09:31', '', '', $From_Date],
+//                 'SHIFT2' => ['13:30', '15:30', '19:29', '21:31', '', '', $From_Date],
+//                 'SHIFT3' => ['21:30', '23:30', '00:01', '02:01', '', '', $From_Date]
+//             ]
+//         ];
+
+//         if (!isset($Shifts[$LocationCode][$Enter_Shift])) {
+//             return [];
+//         }
+
+//         list($Search_From_Time, $Search_To_Time, $Break_From_Time, $Break_To_Time, $Day_Out_From_Time, $Day_Out_To_Time, $Shift_Date) = $Shifts[$LocationCode][$Enter_Shift];
+
+//         // Helper function for date/time with day increment for times past midnight (before 06:00)
+//         function getDateTimeWithDayCheck($date, $time)
+//         {
+//             if (empty($time)) return null;
+//             if (strtotime($time) < strtotime('06:00')) {
+//                 return date('Y-m-d H:i:s', strtotime($date . ' +1 day ' . $time));
+//             } else {
+//                 return date('Y-m-d H:i:s', strtotime($date . ' ' . $time));
+//             }
+//         }
+
+//         $Search_From_DateTime = getDateTimeWithDayCheck($Shift_Date, $Search_From_Time);
+//         $Search_To_DateTime = getDateTimeWithDayCheck($Shift_Date, $Search_To_Time);
+//         $Break_From_DateTime = getDateTimeWithDayCheck($Shift_Date, $Break_From_Time);
+//         $Break_To_DateTime = getDateTimeWithDayCheck($Shift_Date, $Break_To_Time);
+//         $Day_Out_From_DateTime = getDateTimeWithDayCheck($Shift_Date, $Day_Out_From_Time);
+//         $Day_Out_To_DateTime = getDateTimeWithDayCheck($Shift_Date, $Day_Out_To_Time);
+
+//         $Sql = "SELECT
+//                     E.Division AS Unit,
+//                     E.Wages AS Category,
+//                     E.DeptName AS Sub_Department,
+//                     E.EmpLevel,
+//                     E.MachineID,
+//                     E.oldEmpno AS OLD_EmpNo,
+//                     E.FirstName AS EmpName,
+//                     E.WorkArea,
+//                     E.SubSection_Name,
+//                     FORMAT(F.TimeIN, 'HH:mm tt') AS Day_In,
+//                     FORMAT(BO.TimeOUT, 'HH:mm tt') AS Break_Out,
+//                     FORMAT(BI.TimeIN, 'HH:mm tt') AS Break_IN,
+//                     FORMAT(DO.TimeOUT, 'HH:mm tt') AS Day_Out
+//                 FROM
+//                     Employee_Mst E
+//                 INNER JOIN
+//                     UserDetails_Det Login
+//                     ON Login.Ccode = E.CompCode
+//                     AND Login.Lcode = E.LocCode
+//                     AND Login.Name = E.DeptName
+//                 LEFT JOIN (
+//                     SELECT MachineID, MIN(TimeIN) AS TimeIN
+//                     FROM LogTime_IN
+//                     WHERE CompCode = '$CompanyCode'
+//                       AND LocCode = '$LocationCode'
+//                       AND TimeIN BETWEEN '$Search_From_DateTime' AND '$Search_To_DateTime'
+//                     GROUP BY MachineID
+//                 ) AS F ON F.MachineID = E.MachineID
+//                 LEFT JOIN (
+//                     SELECT MachineID, MIN(TimeOUT) AS TimeOUT
+//                     FROM LogTime_OUT
+//                     WHERE CompCode = '$CompanyCode'
+//                       AND LocCode = '$LocationCode'
+//                       AND TimeOUT BETWEEN '$Break_From_DateTime' AND '$Break_To_DateTime'
+//                     GROUP BY MachineID
+//                 ) AS BO ON BO.MachineID = E.MachineID
+//                 LEFT JOIN (
+//                     SELECT MachineID, MIN(TimeIN) AS TimeIN
+//                     FROM LogTime_IN
+//                     WHERE CompCode = '$CompanyCode'
+//                       AND LocCode = '$LocationCode'
+//                       AND TimeIN BETWEEN '$Break_From_DateTime' AND '$Break_To_DateTime'
+//                     GROUP BY MachineID
+//                 ) AS BI ON BI.MachineID = E.MachineID
+//                 LEFT JOIN (
+//                     SELECT MachineID, MIN(TimeOUT) AS TimeOUT
+//                     FROM LogTime_OUT
+//                     WHERE CompCode = '$CompanyCode'
+//                       AND LocCode = '$LocationCode'
+//                       AND TimeOUT BETWEEN '$Day_Out_From_DateTime' AND '$Day_Out_To_DateTime'
+//                     GROUP BY MachineID
+//                 ) AS DO ON DO.MachineID = E.MachineID
+//                 WHERE
+//                     E.CompCode = '$CompanyCode'
+//                     AND E.LocCode = '$LocationCode'
+//                     AND Login.UserID = '$Login_User'
+//                     AND E.CatName = 'WORKER'
+//                     AND NOT (
+//                         F.TimeIN IS NULL
+//                         AND BO.TimeOUT IS NULL
+//                         AND BI.TimeIN IS NULL
+//                         AND DO.TimeOUT IS NULL
+//                     )
+//                 ORDER BY
+//                     E.Division, E.Wages, E.DeptName, E.MachineID";
+
+//         $Query = $this->db->query($Sql);
+
+//           echo '<pre>';
+//         print_r($Sql);
+//         exit;
+
+//         if ($Query->num_rows() > 0) {
+//             return $Query->result();
+//         } else {
+//             return 0;
+//         }
+//     }
+
+//     return 0;
+// }
+
+public function Get_Punching_List($CompanyCode, $LocationCode, $Login_User, $From_Date, $Enter_Shift)
+{
+    $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Enter_Shift'";
+    $shift_Data = $this->db->query($sql1)->row();
+
+    if (!$shift_Data) {
+        return 0;
+    }
+
+    $Shifts = [
+        'SHIFT1' => ['07:00', '10:00', '10:59', '14:01', '16:15', '17:00'],
+        'SHIFT2' => ['16:00', '18:00', '18:59', '22:31', '23:30', '01:15'],
+        'SHIFT3' => ['00:30', '02:15', '02:59', '06:31', '07:00', '08:30']
+    ];
+
+    if (!isset($Shifts[$Enter_Shift])) {
+        return [];
+    }
+
+    list($IN_From, $IN_To, $Break_From, $Break_To, $OUT_From, $OUT_To) = $Shifts[$Enter_Shift];
+
+    $FromDate = $From_Date;
+    $NextDate = date('Y-m-d', strtotime($From_Date . ' +1 day'));
+    $PrevDate = date('Y-m-d', strtotime($From_Date . ' -1 day'));
+
+    function dt($date, $time) {
+        return empty($time) ? null : date('Y-m-d H:i:s', strtotime("$date $time"));
+    }
+
+    if ($Enter_Shift === 'SHIFT1') {
+        $IN_From_DT = dt($FromDate, $IN_From);
+        $IN_To_DT = dt($FromDate, $IN_To);
+        $Break_From_DT = dt($FromDate, $Break_From);
+        $Break_To_DT = dt($FromDate, $Break_To);
+        $OUT_From_DT = dt($FromDate, $OUT_From);
+        $OUT_To_DT = dt($FromDate, $OUT_To);
+    } elseif ($Enter_Shift === 'SHIFT2') {
+        $IN_From_DT = dt($FromDate, $IN_From);
+        $IN_To_DT = dt($FromDate, $IN_To);
+        $Break_From_DT = dt($FromDate, $Break_From);
+        $Break_To_DT = dt($FromDate, $Break_To);
+        $OUT_From_DT = dt($FromDate, $OUT_From);
+        $OUT_To_DT = dt($NextDate, $OUT_To);
+    } else {
+        $IN_From_DT = dt($NextDate, $IN_From);
+        $IN_To_DT = dt($NextDate, $IN_To);
+        $Break_From_DT = dt($NextDate, $Break_From);
+        $Break_To_DT = dt($NextDate, $Break_To);
+        $OUT_From_DT = dt($NextDate, $OUT_From);
+        $OUT_To_DT = dt($NextDate, $OUT_To);
+    }
+
+    $Sql = "SELECT
+                E.Division AS Unit,
+                E.Wages AS Category,
+                E.DeptName AS Sub_Department,
+                E.EmpLevel,
+                E.MachineID,
+                E.oldEmpno AS OLD_EmpNo,
+                E.FirstName AS EmpName,
+                E.WorkArea,
+                E.SubSection_Name,
+                FORMAT(F.TimeIN, 'HH:mm tt') AS Day_In,
+                FORMAT(BO.TimeOUT, 'HH:mm tt') AS Break_Out,
+                FORMAT(BI.TimeIN, 'HH:mm tt') AS Break_IN,
+                FORMAT(DO.TimeOUT, 'HH:mm tt') AS Day_Out
+            FROM
+                Employee_Mst E
+            INNER JOIN
+                UserDetails_Det Login
+                ON Login.Ccode = E.CompCode
+                AND Login.Lcode = E.LocCode
+                AND Login.Name = E.DeptName
+            LEFT JOIN (
+                SELECT MachineID, MIN(TimeIN) AS TimeIN
+                FROM LogTime_IN
+                WHERE CompCode = '$CompanyCode'
+                  AND LocCode = '$LocationCode'
+                  AND TimeIN BETWEEN '$IN_From_DT' AND '$IN_To_DT'
+                GROUP BY MachineID
+            ) AS F ON F.MachineID = E.MachineID
+            LEFT JOIN (
+                SELECT MachineID, MIN(TimeOUT) AS TimeOUT
+                FROM LogTime_OUT
+                WHERE CompCode = '$CompanyCode'
+                  AND LocCode = '$LocationCode'
+                  AND TimeOUT BETWEEN '$Break_From_DT' AND '$Break_To_DT'
+                GROUP BY MachineID
+            ) AS BO ON BO.MachineID = E.MachineID
+            LEFT JOIN (
+                SELECT MachineID, MIN(TimeIN) AS TimeIN
+                FROM LogTime_IN
+                WHERE CompCode = '$CompanyCode'
+                  AND LocCode = '$LocationCode'
+                  AND TimeIN BETWEEN '$Break_From_DT' AND '$Break_To_DT'
+                GROUP BY MachineID
+            ) AS BI ON BI.MachineID = E.MachineID
+            LEFT JOIN (
+                SELECT MachineID, MIN(TimeOUT) AS TimeOUT
+                FROM LogTime_OUT
+                WHERE CompCode = '$CompanyCode'
+                  AND LocCode = '$LocationCode'
+                  AND TimeOUT BETWEEN '$OUT_From_DT' AND '$OUT_To_DT'
+                GROUP BY MachineID
+            ) AS DO ON DO.MachineID = E.MachineID
+            WHERE
+                E.CompCode = '$CompanyCode'
+                AND E.LocCode = '$LocationCode'
+                AND Login.UserID = '$Login_User'
+                AND E.CatName = 'WORKER'
+                AND NOT (
+                    F.TimeIN IS NULL
+                    AND BO.TimeOUT IS NULL
+                    AND BI.TimeIN IS NULL
+                    AND DO.TimeOUT IS NULL
+                )
+            ORDER BY
+                E.Division, E.Wages, E.DeptName, E.MachineID";
+
+    $Query = $this->db->query($Sql);
+
+    if ($Query->num_rows() > 0) {
+        return $Query->result();
+    } else {
+        return 0;
+    }
+}
+
+
+
+
+
+
+
+
+
+public function Get_Punching_List_Details($CompanyCode, $LocationCode, $Login_User, $From_Date, $Enter_Shift)
+{
+    $To_Date = date('Y-m-d', strtotime($From_Date . ' +1 day'));
+
+    $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Enter_Shift'";
+    $shift_Data = $this->db->query($sql1)->row();
+
+    if ($shift_Data) {
+        $Shift_Pounch_Start = $shift_Data->StartIN;
+        $Shift_Pounch_End = $shift_Data->EndIN;
+
+        $Shift_Date_Convert = $From_Date;
+        $Shift_Date_Conversion = ($shift_Data->StartIN_Days == 1 && $shift_Data->EndIN_Days == 1)
+            ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
+            : $Shift_Date_Convert;
+
+        $From_Date = $Shift_Date_Conversion;
+
+        $Shifts = [
+            'PRECOT - A' => [
+                'SHIFT1' => ['07:00', '10:00', '10:59', '14:01', '16:15', '17:00', $From_Date],
+                'SHIFT2' => ['16:00', '18:00', '18:59', '22:31', '23:30', '01:15', $From_Date],
+                'SHIFT3' => ['00:30', '02:15', '02:59', '06:31', '07:00', '08:30', $Shift_Date_Conversion]
+            ],
+            'PRECOT - B' => [
+                'SHIFT1' => ['07:00', '10:00', '10:59', '14:01', '', '', $From_Date],
+                'SHIFT2' => ['16:00', '18:00', '18:59', '22:01', '', '', $From_Date],
+                'SHIFT3' => ['00:30', '02:15', '02:59', '06:01', '', '', $Shift_Date_Conversion]
+            ],
+            'PRECOT - C' => [
+                'SHIFT1' => ['07:00', '10:00', '10:59', '13:01', '', '', $From_Date],
+                'SHIFT2' => ['16:00', '18:00', '18:59', '21:31', '', '', $From_Date],
+                'SHIFT3' => ['00:30', '02:15', '02:59', '06:31', '', '', $Shift_Date_Conversion]
+            ],
+            'PRECOT - D' => [
+                'SHIFT1' => ['07:00', '10:00', '10:59', '13:01', '', '', $From_Date],
+                'SHIFT2' => ['16:00', '18:00', '18:59', '21:31', '', '', $From_Date],
+                'SHIFT3' => ['00:30', '02:15', '02:59', '06:31', '', '', $Shift_Date_Conversion]
+            ],
+            'PRECOT - K' => [
+                'SHIFT1' => ['05:10', '07:30', '07:59', '09:31', '', '', $From_Date],
+                'SHIFT2' => ['13:30', '15:30', '19:29', '21:31', '', '', $From_Date],
+                'SHIFT3' => ['21:30', '23:30', '00:01', '02:01', '', '', $From_Date]
+            ]
+        ];
+
+        if (!isset($Shifts[$LocationCode][$Enter_Shift])) {
+            return [];
+        }
+
+        list($Search_From_Time, $Search_To_Time, $Break_From_Time, $Break_To_Time, $Day_Out_From_Time, $Day_Out_To_Time, $Shift_Date) = $Shifts[$LocationCode][$Enter_Shift];
+
+        // Helper function for date/time with day increment for times past midnight (before 06:00)
+        function getDateTimeWithDayCheck($date, $time)
+        {
+            if (empty($time)) return null;
+            if (strtotime($time) < strtotime('06:00')) {
+                return date('Y-m-d H:i:s', strtotime($date . ' +1 day ' . $time));
+            } else {
+                return date('Y-m-d H:i:s', strtotime($date . ' ' . $time));
             }
+        }
 
-            list($Search_From_Time, $Search_To_Time, $Break_From_Time, $Break_To_Time, $Break_Date) = $Shifts[$LocationCode][$Enter_Shift];
+        $Search_From_DateTime = getDateTimeWithDayCheck($Shift_Date, $Search_From_Time);
+        $Search_To_DateTime = getDateTimeWithDayCheck($Shift_Date, $Search_To_Time);
+        $Break_From_DateTime = getDateTimeWithDayCheck($Shift_Date, $Break_From_Time);
+        $Break_To_DateTime = getDateTimeWithDayCheck($Shift_Date, $Break_To_Time);
+        $Day_Out_From_DateTime = getDateTimeWithDayCheck($Shift_Date, $Day_Out_From_Time);
+        $Day_Out_To_DateTime = getDateTimeWithDayCheck($Shift_Date, $Day_Out_To_Time);
 
-            $Search_From_DateTime = "$From_Date $Search_From_Time";
-            $Search_To_DateTime = "$Shift_Date_Conversion $Search_To_Time";
-            $Break_From_DateTime = "$Break_Date $Break_From_Time";
-            $Break_To_DateTime = "$Break_Date $Break_To_Time";
-
-            $Sql = "SELECT
+        $Sql = "SELECT
                     E.Division AS Unit,
                     E.Wages AS Category,
                     E.DeptName AS Sub_Department,
@@ -464,8 +929,9 @@ class  Employee_Model extends CI_Model
                     E.WorkArea,
                     E.SubSection_Name,
                     FORMAT(F.TimeIN, 'HH:mm tt') AS Day_In,
-                    FORMAT(BO.TimeOUT, 'hh:mm tt') AS Break_Out,
-                    FORMAT(BI.TimeIN, 'HH:mm tt') AS Break_IN
+                    FORMAT(BO.TimeOUT, 'HH:mm tt') AS Break_Out,
+                    FORMAT(BI.TimeIN, 'HH:mm tt') AS Break_IN,
+                    FORMAT(DO.TimeOUT, 'HH:mm tt') AS Day_Out
                 FROM
                     Employee_Mst E
                 INNER JOIN
@@ -497,6 +963,14 @@ class  Employee_Model extends CI_Model
                       AND TimeIN BETWEEN '$Break_From_DateTime' AND '$Break_To_DateTime'
                     GROUP BY MachineID
                 ) AS BI ON BI.MachineID = E.MachineID
+                LEFT JOIN (
+                    SELECT MachineID, MIN(TimeOUT) AS TimeOUT
+                    FROM LogTime_OUT
+                    WHERE CompCode = '$CompanyCode'
+                      AND LocCode = '$LocationCode'
+                      AND TimeOUT BETWEEN '$Day_Out_From_DateTime' AND '$Day_Out_To_DateTime'
+                    GROUP BY MachineID
+                ) AS DO ON DO.MachineID = E.MachineID
                 WHERE
                     E.CompCode = '$CompanyCode'
                     AND E.LocCode = '$LocationCode'
@@ -506,31 +980,175 @@ class  Employee_Model extends CI_Model
                         F.TimeIN IS NULL
                         AND BO.TimeOUT IS NULL
                         AND BI.TimeIN IS NULL
+                        AND DO.TimeOUT IS NULL
                     )
                 ORDER BY
                     E.Division, E.Wages, E.DeptName, E.MachineID";
 
-            $Query = $this->db->query($Sql);
-
-            // echo '<pre>';
-            // print_r($Sql);
-            // exit;
-
-            if ($Query->num_rows() > 0) {
-                return $Query->result();
-            } else {
-                return 0;
-            }
+        $Query = $this->db->query($Sql);
 
 
+        if ($Query->num_rows() > 0) {
+            return $Query->result();
+        } else {
+            return 0;
         }
-
-
-
     }
 
+    return 0;
+}
 
-    public function Get_Employee_Count($CompanyCode, $LocationCode){
+
+public function Employee_Punching_List_Download_Login_Det($CompanyCode, $LocationCode, $Login_User, $From_Date, $Enter_Shift)
+{
+    $To_Date = date('Y-m-d', strtotime($From_Date . ' +1 day'));
+
+    $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Enter_Shift'";
+    $shift_Data = $this->db->query($sql1)->row();
+
+    if ($shift_Data) {
+        $Shift_Pounch_Start = $shift_Data->StartIN;
+        $Shift_Pounch_End = $shift_Data->EndIN;
+
+        $Shift_Date_Convert = $From_Date;
+        $Shift_Date_Conversion = ($shift_Data->StartIN_Days == 1 && $shift_Data->EndIN_Days == 1)
+            ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
+            : $Shift_Date_Convert;
+
+        $From_Date = $Shift_Date_Conversion;
+
+        $Shifts = [
+            'PRECOT - A' => [
+                'SHIFT1' => ['07:00', '10:00', '10:59', '14:01', '16:15', '17:00', $From_Date],
+                'SHIFT2' => ['16:00', '18:00', '18:59', '22:31', '23:30', '01:15', $From_Date],
+                'SHIFT3' => ['00:30', '02:15', '02:59', '06:31', '07:00', '08:30', $Shift_Date_Conversion]
+            ],
+            // Add other shifts for PRECOT-B, PRECOT-C, etc. here as in your previous data
+        ];
+
+        if (!isset($Shifts[$LocationCode][$Enter_Shift])) {
+            return [];
+        }
+
+        list($Search_From_Time, $Search_To_Time, $Break_From_Time, $Break_To_Time, $Day_Out_From_Time, $Day_Out_To_Time, $Shift_Date) = $Shifts[$LocationCode][$Enter_Shift];
+
+        // Helper function for date/time with day increment for times past midnight (before 06:00)
+        function getDateTimeWithDayCheck($date, $time)
+        {
+            if (empty($time)) return null;
+            if (strtotime($time) < strtotime('06:00')) {
+                return date('Y-m-d H:i:s', strtotime($date . ' +1 day ' . $time));
+            } else {
+                return date('Y-m-d H:i:s', strtotime($date . ' ' . $time));
+            }
+        }
+
+        $Search_From_DateTime = getDateTimeWithDayCheck($Shift_Date, $Search_From_Time);
+        $Search_To_DateTime = getDateTimeWithDayCheck($Shift_Date, $Search_To_Time);
+        $Break_From_DateTime = getDateTimeWithDayCheck($Shift_Date, $Break_From_Time);
+        $Break_To_DateTime = getDateTimeWithDayCheck($Shift_Date, $Break_To_Time);
+        $Day_Out_From_DateTime = getDateTimeWithDayCheck($Shift_Date, $Day_Out_From_Time);
+        $Day_Out_To_DateTime = getDateTimeWithDayCheck($Shift_Date, $Day_Out_To_Time);
+
+        // Modified SQL query to select only employees with missing punches (at least one of the fields is NULL)
+        $Sql = "SELECT
+                    E.Division AS Unit,
+                    E.Wages AS Category,
+                    E.DeptName AS Sub_Department,
+                    E.EmpLevel,
+                    E.MachineID,
+                    E.oldEmpno AS OLD_EmpNo,
+                    E.FirstName AS EmpName,
+                    E.WorkArea,
+                    E.SubSection_Name,
+                    FORMAT(F.TimeIN, 'HH:mm tt') AS Day_In,
+                    FORMAT(BO.TimeOUT, 'HH:mm tt') AS Break_Out,
+                    FORMAT(BI.TimeIN, 'HH:mm tt') AS Break_IN,
+                    FORMAT(DO.TimeOUT, 'HH:mm tt') AS Day_Out
+                FROM
+                    Employee_Mst E
+                INNER JOIN
+                    UserDetails_Det Login
+                    ON Login.Ccode = E.CompCode
+                    AND Login.Lcode = E.LocCode
+                    AND Login.Name = E.DeptName
+                LEFT JOIN (
+                    SELECT MachineID, MIN(TimeIN) AS TimeIN
+                    FROM LogTime_IN
+                    WHERE CompCode = '$CompanyCode'
+                      AND LocCode = '$LocationCode'
+                      AND TimeIN BETWEEN '$Search_From_DateTime' AND '$Search_To_DateTime'
+                    GROUP BY MachineID
+                ) AS F ON F.MachineID = E.MachineID
+                LEFT JOIN (
+                    SELECT MachineID, MIN(TimeOUT) AS TimeOUT
+                    FROM LogTime_OUT
+                    WHERE CompCode = '$CompanyCode'
+                      AND LocCode = '$LocationCode'
+                      AND TimeOUT BETWEEN '$Break_From_DateTime' AND '$Break_To_DateTime'
+                    GROUP BY MachineID
+                ) AS BO ON BO.MachineID = E.MachineID
+                LEFT JOIN (
+                    SELECT MachineID, MIN(TimeIN) AS TimeIN
+                    FROM LogTime_IN
+                    WHERE CompCode = '$CompanyCode'
+                      AND LocCode = '$LocationCode'
+                      AND TimeIN BETWEEN '$Break_From_DateTime' AND '$Break_To_DateTime'
+                    GROUP BY MachineID
+                ) AS BI ON BI.MachineID = E.MachineID
+                LEFT JOIN (
+                    SELECT MachineID, MIN(TimeOUT) AS TimeOUT
+                    FROM LogTime_OUT
+                    WHERE CompCode = '$CompanyCode'
+                      AND LocCode = '$LocationCode'
+                      AND TimeOUT BETWEEN '$Day_Out_From_DateTime' AND '$Day_Out_To_DateTime'
+                    GROUP BY MachineID
+                ) AS DO ON DO.MachineID = E.MachineID
+                WHERE
+                    E.CompCode = '$CompanyCode'
+                    AND E.LocCode = '$LocationCode'
+                    AND Login.UserID = '$Login_User'
+                    AND E.CatName = 'WORKER'
+                    AND (
+                        F.TimeIN IS NULL
+                        OR BO.TimeOUT IS NULL
+                        OR BI.TimeIN IS NULL
+                        OR DO.TimeOUT IS NULL
+                    )
+                AND NOT (
+                    F.TimeIN IS NULL
+                    AND BO.TimeOUT IS NULL
+                    AND BI.TimeIN IS NULL
+                    AND DO.TimeOUT IS NULL
+                )  -- This condition skips employees missing all punches
+                ORDER BY
+                    E.Division, E.Wages, E.DeptName, E.MachineID";
+
+        $Query = $this->db->query($Sql);
+
+        // Check if query returns rows
+        if ($Query->num_rows() > 0) {
+            return $Query->result();
+        } else {
+            return 0;
+        }
+    }
+
+    return 0;
+}
+
+
+
+
+
+
+
+
+   
+
+
+    public function Get_Employee_Count($CompanyCode, $LocationCode)
+    {
 
         $Sql = "SELECT COUNT(DISTINCT EmpNo) AS Total_Active_Employee FROM Employee_Mst WHERE LocCode = '$LocationCode' AND CompCode = '$CompanyCode' AND IsActive = 'Yes'";
         $Query = $this->db->query($Sql);

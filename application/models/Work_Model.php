@@ -1,4 +1,8 @@
-<?php if (! defined('BASEPATH')) exit('No direct script access allowed');
+<?php
+
+use PhpParser\Node\Expr\Print_;
+
+if (! defined('BASEPATH')) exit('No direct script access allowed');
 
 
 class  Work_Model extends CI_Model
@@ -18,7 +22,6 @@ class  Work_Model extends CI_Model
         $sql = "SELECT ShiftDesc, StartTime, EndTime FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc != 'GENERAL' ORDER BY ShiftDesc ASC";
         $query = $this->db->query($sql);
         $shifts = $query->result();
-
 
         // if ($query->num_rows() > 0) {
         //     $matched = [];
@@ -47,232 +50,1163 @@ class  Work_Model extends CI_Model
         return $shifts;
     }
 
+
+    // OT Hour Logic Function
+    // public function Shift_Employee_List($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Type)
+    // {
+    //     $Session = $this->session->userdata('sess_array');
+
+    //     if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+    //         $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Shift'";
+    //         $shift_Data = $this->db->query($sql1)->row();
+
+    //         if ($shift_Data) {
+    //             if ($Shift == 'SHIFT2') {
+    //                 $Shift_Pounch_Start = $shift_Data->StartIN;
+    //                 $Shift_Pounch_End = '17:15';
+    //                 $Shift_Date_Convert = $Date;
+    //             } else {
+    //                 $Shift_Pounch_Start = $shift_Data->StartIN;
+    //                 $Shift_Pounch_End = $shift_Data->EndIN;
+    //             }
+
+    //             $Shift_Date_Convert = $Date;
+
+    //             $Shift_Date_Conversion = ($shift_Data->StartIN_Days == 1 && $shift_Data->EndIN_Days == 1)
+    //                 ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
+    //                 : $Shift_Date_Convert;
+
+    //             $Shift_Master = [
+    //                 'SHIFT1' => 'SHIFT1',
+    //                 'SHIFT2' => 'SHIFT2',
+    //                 'SHIFT3' => 'SHIFT3',
+    //             ];
+
+    //             $Current_Shift = $Shift;
+
+    //             function getPreviousShift($currentShift, $shiftMaster)
+    //             {
+    //                 $shiftKeys = array_keys($shiftMaster);
+    //                 if (in_array($currentShift, $shiftKeys)) {
+    //                     $currentIndex = array_search($currentShift, $shiftKeys);
+    //                     $previousIndex = ($currentIndex - 1) < 0 ? count($shiftKeys) - 1 : $currentIndex - 1;
+    //                     return $shiftKeys[$previousIndex];
+    //                 }
+    //                 return null;
+    //             }
+
+    //             $Previous_Shift = ($Current_Shift == 'SHIFT1') ? '' : getPreviousShift($Current_Shift, $Shift_Master);
+
+    //             $Employee_Shift_Sql = "SELECT EmpNo FROM Web_Employee_Work_Allocation_Mst Work
+    //             INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode
+    //                 AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+    //             WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+    //                 AND Work.Date = '$Date' AND Work.Shift = '$Previous_Shift'
+    //                 AND Work.Work_Status = '1' AND Login.UserID = '$Login_User'
+    //                 AND Work.Closing_Status = '0'";
+
+    //             $Employee_Shift_Query = $this->db->query($Employee_Shift_Sql);
+
+    //             if ($Employee_Shift_Query->num_rows() > 0) {
+    //                 return [
+    //                     'Status' => 'Error',
+    //                     'Message' => 'Kindly close the ' . $Previous_Shift . ' shift and verify it.'
+    //                 ];
+    //             } else {
+    //                 $sql2 = "SELECT DISTINCT
+    //                     Time.MachineID, Emp.FirstName, Emp.Wages, Emp.WorkArea, Emp.JobCardNo,
+    //                     Emp.DeptName, Emp.DeptGrp, Emp.SubSection_Name
+    //                 FROM UserDetails_Det Log
+    //                 INNER JOIN Employee_Mst Emp ON Log.Lcode = Emp.LocCode AND Log.Name = Emp.DeptName
+    //                 INNER JOIN LogTime_IN Time ON Time.MachineID = Emp.MachineID
+    //                 WHERE Log.UserID = '$Login_User'
+    //                     AND CONVERT(DATE, Time.TimeIN) = '$Shift_Date_Conversion'
+    //                     AND Time.TimeIN BETWEEN '$Shift_Date_Conversion $Shift_Pounch_Start' AND '$Shift_Date_Conversion $Shift_Pounch_End'
+    //                     AND Emp.CatName != 'STAFF'
+    //                     AND Time.CompCode = '$CompanyCode'
+    //                     AND Time.LocCode = '$LocationCode'
+    //                     AND Emp.IsActive = 'Yes'";
+
+    //                 $log_Data = $this->db->query($sql2)->result();
+    //                 $current_time = date('Y-m-d H:i:s');
+
+    //                 foreach ($log_Data as $Employee_Data) {
+    //                     $Employee_Id = $Employee_Data->MachineID;
+    //                     $Employee_WorkArea = $Employee_Data->WorkArea;
+    //                     $Employee_Department = $Employee_Data->DeptName;
+
+    //                     $existing_sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst
+    //                     WHERE Date = '$Date' AND Shift = '$Shift'
+    //                     AND EmpNo = '$Employee_Id' AND Work_Status = '1'";
+
+    //                     if ($this->db->query($existing_sql)->num_rows() == 0) {
+    //                         $Work_Check_Sql = "SELECT * FROM Web_Work_Area_Mst Work
+    //                         INNER JOIN Web_Machine_Mst Machine
+    //                             ON Work.Ccode = Machine.Ccode AND Work.Lcode = Machine.Lcode
+    //                             AND Work.WorkArea = Machine.WorkArea AND Work.Department = Machine.Department
+    //                         WHERE Machine.WorkArea = '$Employee_WorkArea'
+    //                             AND Work.Department = '$Employee_Department'";
+
+    //                         $Work_Check_Query = $this->db->query($Work_Check_Sql);
+    //                         $Work_Check_Rows = $Work_Check_Query->num_rows();
+
+    //                         $Sql_OT = "SELECT EmpNo FROM Web_Employee_Work_Allocation_Mst Work
+    //                         INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode
+    //                             AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+    //                         WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+    //                             AND Work.Date = '$Date' AND Work.EmpNo = '$Employee_Id'
+    //                             AND Work.Shift = '$Previous_Shift' AND Work.Work_Status = '1'
+    //                             AND Work.Assign_Status = '1' AND Login.UserID = '$Login_User'
+    //                             AND Work.Closing_Status = '1'";
+
+    //                         $Query_OT = $this->db->query($Sql_OT);
+
+    //                         $allocations = [
+    //                             'Ccode' => $CompanyCode,
+    //                             'Lcode' => $LocationCode,
+    //                             'Wages' => $Employee_Data->Wages,
+    //                             'FirstName' => $Employee_Data->FirstName,
+    //                             'EmpNo' => $Employee_Id,
+    //                             'ExistingCode' => $Employee_Id,
+    //                             'Shift' => $Shift,
+    //                             'Date' => $Date,
+    //                             'Job_Card_No' => $Employee_Data->JobCardNo,
+    //                             'Department' => $Employee_Data->DeptGrp,
+    //                             'Sub_Department' => $Employee_Data->DeptName,
+    //                             'Sub_Section' => $Employee_Data->SubSection_Name,
+    //                             'WorkArea' => $Employee_Data->WorkArea,
+    //                             'Previous_Shift' => '-',
+    //                             'OT_Confirmation' => '-',
+    //                             'Machine_Id' => '',
+    //                             'Machine_Name' => '-',
+    //                             'FrameType' => '-',
+    //                             'Frame' => ($Work_Check_Rows == 0) ? 'Others' : '-',
+    //                             'Type' => $Type,
+    //                             'Screen_Type' => 'Shift_Employee_Screen',
+    //                             'Work_Type' => ($Work_Check_Rows == 0) ? 'Others' : '-',
+    //                             'Status_Updated' => ($Work_Check_Rows == 0) ? 'Others' : '-',
+    //                             'Work_Start' => '-',
+    //                             'Work_End' => '-',
+    //                             'Work_Duration' => '-',
+    //                             'Machine_EB_No' => '-',
+    //                             'Work_Status' => '1',
+    //                             'Assign_Status' => ($Work_Check_Rows == 0) ? '1' : '0',
+    //                             'Closing_Status' => '0',
+    //                             'IsWork' => '0',
+    //                             'Edit_Reason' => '-',
+    //                             'Description' => $Employee_Data->WorkArea,
+    //                             'Created_By' => $Login_User,
+    //                             'Created_Time' => $current_time,
+    //                             'Updated_By' => '-',
+    //                             'Updated_Time' => '-',
+    //                         ];
+
+    //                         if ($Query_OT->num_rows() == 1) {
+    //                             $allocations['Working_Type'] = 'OT';
+    //                             $this->db->insert('Web_Employee_Work_Allocation_Mst', $allocations);
+    //                         }
+
+    //                         $allocations['Working_Type'] = 'SHIFT';
+    //                         $this->db->insert('Web_Employee_Work_Allocation_Mst', $allocations);
+    //                     }
+    //                 }
+
+    //                 $NoWork_Sql = "UPDATE Work
+    //                 SET Work.Sub_Department = Login.Name,
+    //                     Work.WorkArea = '',
+    //                     Work.Job_Card_No = ''
+    //                 FROM Web_Employee_Work_Allocation_Mst AS Work
+    //                 INNER JOIN UserDetails_Det AS Login
+    //                     ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode
+    //                 WHERE Work.Date = '$Date' AND Work.Shift = '$Shift'
+    //                     AND Work.Work_Type = 'NoWork' AND Work.Work_Status = '1'
+    //                     AND Work.Assign_Status = '0' AND Work.Lcode = '$LocationCode'
+    //                     AND Login.Ccode = '$CompanyCode' AND Login.UserID = '$Login_User'";
+
+    //                 $this->db->query($NoWork_Sql);
+
+    //                 $sql4 = "SELECT Work.Type AS Type, Work.*,
+    //                     CASE
+    //                         WHEN Work.Assign_Status = '0' THEN 'Unassigned'
+    //                         WHEN Work.Work_Type = 'NoWork' THEN 'NoWork'
+    //                         ELSE 'Assigned'
+    //                     END AS WorkStatus
+    //                 FROM Web_Employee_Work_Allocation_Mst AS Work
+    //                 INNER JOIN UserDetails_Det AS Login
+    //                     ON Login.Lcode = Work.Lcode AND Login.Name = Work.Sub_Department
+    //                 WHERE Login.UserID = '$Login_User' AND Work.Date = '$Date'
+    //                     AND Work.Shift = '$Shift' AND Work.Work_Status = '1'";
+
+    //                 $employee_data = $this->db->query($sql4)->result();
+    //                 $Un_Assigned_Data = [];
+    //                 $Assigned_Data = [];
+    //                 $No_Work_Data = [];
+
+    //                 foreach ($employee_data as $employee) {
+    //                     if ($employee->WorkStatus == 'Unassigned') {
+    //                         $Un_Assigned_Data[] = $employee;
+    //                     } elseif ($employee->WorkStatus == 'Assigned') {
+    //                         $Assigned_Data[] = $employee;
+    //                     } else {
+    //                         $No_Work_Data[] = $employee;
+    //                     }
+    //                 }
+
+    //                 $NoWork_Employee_Sql1 = "SELECT Work.Type AS Type, Work.*
+    //                 FROM Web_Employee_Work_Allocation_Mst AS Work
+    //                 INNER JOIN UserDetails_Det AS Login
+    //                     ON Login.Lcode = Work.Lcode AND Login.Name = Work.Sub_Department
+    //                 WHERE Login.UserID = '$Login_User'
+    //                     AND Work.Date = '$Date' AND Work.Shift = '$Shift'
+    //                     AND Work.Work_Type = 'NoWork' AND Work.Work_Status = '1'
+    //                     AND Work.Assign_Status = '0'";
+
+    //                 $user_dept_sql = "SELECT Name FROM UserDetails_Det
+    //                 WHERE UserID = '$Login_User' AND Ccode = '$CompanyCode' AND Lcode = '$LocationCode'";
+    //                 $user_dept = $this->db->query($user_dept_sql)->row();
+    //                 $deptName = $user_dept ? $user_dept->Name : '';
+
+    //                 if ($deptName == 'HRD' || $deptName == 'Human Resource Services') {
+    //                     $NoWorkEmployeeList1 = $this->db->query($NoWork_Employee_Sql1)->result();
+    //                     $All_Employee_List = array_merge($Assigned_Data, $Un_Assigned_Data);
+    //                     return $All_Employee_List;
+    //                 } else {
+    //                     $NoWorkEmployeeList1 = $this->db->query($NoWork_Employee_Sql1)->result();
+    //                     $All_Employee_List = array_merge($Assigned_Data, $Un_Assigned_Data, $NoWorkEmployeeList1);
+    //                     return $All_Employee_List;
+    //                 }
+    //             }
+    //         }
+    //     } else {
+    //         redirect(base_url(), 'refresh');
+    //     }
+    // }
+
+
+
+    // Old Logic Function 
+    // public function Shift_Employee_List($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Type)
+    //     {
+    //         $Session = $this->session->userdata('sess_array');
+    //         if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+
+    //             $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Shift'";
+    //             $shift_Data = $this->db->query($sql1)->row();
+
+    //             if ($shift_Data) {
+
+
+    //                 if ($Shift == 'SHIFT2') {
+    //                     $Shift_Pounch_Start = $shift_Data->StartIN;
+    //                     $Shift_Pounch_End = '17:15';
+
+    //                     $Shift_Date_Convert = $Date;
+    //                 } else {
+    //                     $Shift_Pounch_Start = $shift_Data->StartIN;
+    //                     $Shift_Pounch_End = $shift_Data->EndIN;
+    //                 }
+
+    //                 $Shift_Date_Convert = $Date;
+
+    //                 $Shift_Date_Conversion = ($shift_Data->StartIN_Days == 1 && $shift_Data->EndIN_Days == 1)
+    //                     ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
+    //                     : $Shift_Date_Convert;
+
+    //                 $Shift_Master = [
+    //                     'SHIFT1' => 'SHIFT1',
+    //                     'SHIFT2' => 'SHIFT2',
+    //                     'SHIFT3' => 'SHIFT3',
+    //                     'SHIFT4' => 'SHIFT4',
+    //                 ];
+
+    //                 $Current_Shift = $Shift;
+
+    //                 function getPreviousShift($currentShift, $shiftMaster)
+    //                 {
+    //                     $shiftKeys = array_keys($shiftMaster);
+    //                     if (in_array($currentShift, $shiftKeys)) {
+    //                         $currentIndex = array_search($currentShift, $shiftKeys);
+    //                         $previousIndex = ($currentIndex - 1) < 0 ? count($shiftKeys) - 1 : $currentIndex - 1;
+    //                         return $shiftKeys[$previousIndex];
+    //                     }
+    //                     return null;
+    //                 }
+
+    //                 $Previous_Shift = ($Current_Shift == 'SHIFT1') ? '' : getPreviousShift($Current_Shift, $Shift_Master);
+
+    //                 $Employee_Shift_Sql = "SELECT EmpNo FROM Web_Employee_Work_Allocation_Mst Work
+    //                     INNER JOIN UserDetails_Det Login
+    //                         ON Work.Lcode = Login.Lcode
+    //                         AND Work.Ccode = Login.Ccode
+    //                         AND Login.Name = Work.Sub_Department
+    //                     WHERE Work.Lcode = '$LocationCode'
+    //                         AND Login.Ccode = '$CompanyCode'
+    //                         AND Work.Date = '$Date'
+    //                         AND Work.Shift = '$Previous_Shift'
+    //                         AND Work.Work_Status = '1'
+    //                         AND Login.UserID = '$Login_User'
+    //                         AND Work.Closing_Status = '0'";
+
+
+
+
+    //                 $Employee_Shift_Query = $this->db->query($Employee_Shift_Sql);
+
+    //                 if ($Employee_Shift_Query->num_rows() > 0) {
+    //                     return [
+    //                         'Status' => 'Error',
+    //                         'Message' => 'Kindly close the ' . $Previous_Shift . ' shift and verify it.'
+    //                     ];
+    //                 } else {
+    //                     $sql2 = "SELECT DISTINCT
+    //                             Time.MachineID, Emp.FirstName, Emp.Wages, Emp.WorkArea, Emp.JobCardNo,
+    //                             Emp.DeptName, Emp.DeptGrp, Emp.SubSection_Name
+    //                         FROM UserDetails_Det Log
+    //                         INNER JOIN Employee_Mst Emp ON Log.Lcode = Emp.LocCode AND Log.Name = Emp.DeptName
+    //                         INNER JOIN LogTime_IN Time ON Time.MachineID = Emp.MachineID
+    //                         WHERE Log.UserID = '$Login_User'
+    //                             AND CONVERT(DATE, Time.TimeIN) = '$Shift_Date_Conversion'
+    //                             AND Time.TimeIN BETWEEN '$Shift_Date_Conversion $Shift_Pounch_Start' AND '$Shift_Date_Conversion $Shift_Pounch_End'
+    //                             AND Emp.CatName != 'STAFF'
+    //                             AND Time.CompCode = '$CompanyCode'
+    //                             AND Time.LocCode = '$LocationCode'
+    //                             AND Emp.IsActive = 'Yes'";
+
+
+    //                     // echo '<pre>';
+    //                     // print_r($sql2);
+    //                     // exit;
+
+
+    //                     $log_Data = $this->db->query($sql2)->result();
+    //                     $current_time = date('Y-m-d H:i:s');
+
+    //                     foreach ($log_Data as $Employee_Data) {
+    //                         $Employee_Id = $Employee_Data->MachineID;
+    //                         $Employee_WorkArea = $Employee_Data->WorkArea;
+    //                         $Employee_Department = $Employee_Data->DeptName;
+
+    //                         $existing_sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst
+    //                             WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id' AND Work_Status = '1'";
+
+    //                         if ($this->db->query($existing_sql)->num_rows() == 0) {
+
+    //                             $Work_Check_Sql = "SELECT * FROM Web_Work_Area_Mst Work
+    //                                 INNER JOIN Web_Machine_Mst Machine
+    //                                     ON Work.Ccode = Machine.Ccode
+    //                                     AND Work.Lcode = Machine.Lcode
+    //                                     AND Work.WorkArea = Machine.WorkArea
+    //                                     AND Work.Department = Machine.Department
+    //                                 WHERE Machine.WorkArea = '$Employee_WorkArea'
+    //                                     AND Work.Department = '$Employee_Department'";
+
+    //                             $Work_Check_Query = $this->db->query($Work_Check_Sql);
+    //                             $Work_Check_Rows = $Work_Check_Query->num_rows();
+
+    //                             $allocations = [
+    //                                 'Ccode' => $CompanyCode,
+    //                                 'Lcode' => $LocationCode,
+    //                                 'Wages' => $Employee_Data->Wages,
+    //                                 'FirstName' => $Employee_Data->FirstName,
+    //                                 'EmpNo' => $Employee_Id,
+    //                                 'ExistingCode' => $Employee_Id,
+    //                                 'Shift' => $Shift,
+    //                                 'Date' => $Date,
+    //                                 'Job_Card_No' => $Employee_Data->JobCardNo,
+    //                                 'Department' => $Employee_Data->DeptGrp,
+    //                                 'Sub_Department' => $Employee_Data->DeptName,
+    //                                 'Sub_Section' => $Employee_Data->SubSection_Name,
+    //                                 'WorkArea' => $Employee_Data->WorkArea,
+    //                                 'Previous_Shift' => '-',
+    //                                 'OT_Confirmation' => '-',
+    //                                 'Working_Type' => 'SHIFT',
+    //                                 'Machine_Id' => '',
+    //                                 'Machine_Name' => '-',
+    //                                 'FrameType' => '-',
+    //                                 'Frame' => ($Work_Check_Rows == 0) ? 'Others' : '-',
+    //                                 'Type' => $Type,
+    //                                 'Screen_Type' => 'Shift_Employee_Screen',
+    //                                 'Work_Type' => ($Work_Check_Rows == 0) ? 'Others' : '-',
+    //                                 'Status_Updated' => ($Work_Check_Rows == 0) ? 'Others' : '-',
+    //                                 'Work_Start' => '-',
+    //                                 'Work_End' => '-',
+    //                                 'Work_Duration' => '-',
+    //                                 'Machine_EB_No' => '-',
+    //                                 'Work_Status' => '1',
+    //                                 'Assign_Status' => ($Work_Check_Rows == 0) ? '1' : '0',
+    //                                 'Closing_Status' => '0',
+    //                                 'IsWork' => '0',
+    //                                 'Edit_Reason' => '-',
+    //                                 'Description' => $Employee_Data->WorkArea,
+    //                                 'Created_By' => $Login_User,
+    //                                 'Created_Time' => $current_time,
+    //                                 'Updated_By' => '-',
+    //                                 'Updated_Time' => '-',
+    //                             ];
+
+    //                             $this->db->insert('Web_Employee_Work_Allocation_Mst', $allocations);
+    //                         }
+    //                     }
+
+    //                     $NoWork_Sql = "UPDATE Work
+    //                             SET
+    //                                 Work.Sub_Department = Login.Name,
+    //                                 Work.WorkArea = '',
+    //                                 Work.Job_Card_No = ''
+    //                             FROM Web_Employee_Work_Allocation_Mst AS Work
+    //                             INNER JOIN UserDetails_Det AS Login
+    //                                 ON Work.Lcode = Login.Lcode
+    //                                 AND Work.Ccode = Login.Ccode
+    //                             WHERE
+    //                                 Work.Date = '$Date'
+    //                                 AND Work.Shift = '$Shift'
+    //                                 AND Work.Work_Type = 'NoWork'
+    //                                 AND Work.Work_Status = '1'
+    //                                 AND Work.Assign_Status = '0'
+    //                                 AND Work.Lcode = '$LocationCode'
+    //                                 AND Login.Ccode = '$CompanyCode'
+    //                                 AND Login.UserID = '$Login_User'";
+
+    //                     $this->db->query($NoWork_Sql);
+
+    //                     $sql4 = "SELECT Work.Type AS Type,
+    //                         Work.*,
+    //                         CASE
+    //                             WHEN Work.Assign_Status = '0' THEN 'Unassigned'
+    //                             WHEN Work.Work_Type = 'NoWork' THEN 'NoWork'
+    //                             ELSE 'Assigned'
+    //                         END AS WorkStatus
+    //                      FROM Web_Employee_Work_Allocation_Mst AS Work
+    //                      INNER JOIN UserDetails_Det AS Login
+    //                          ON Login.Lcode = Work.Lcode
+    //                          AND Login.Name = Work.Sub_Department
+    //                      WHERE Login.UserID = '$Login_User'
+    //                        AND Work.Date = '$Date'
+    //                        AND Work.Shift = '$Shift'
+    //                        AND Work.Work_Status = '1'";
+
+    //                     $employee_data = $this->db->query($sql4)->result();
+    //                     $Un_Assigned_Data = [];
+    //                     $Assigned_Data = [];
+    //                     $No_Work_Data = [];
+
+    //                     foreach ($employee_data as $employee) {
+    //                         if ($employee->WorkStatus == 'Unassigned') {
+    //                             $Un_Assigned_Data[] = $employee;
+    //                         } elseif ($employee->WorkStatus == 'Assigned') {
+    //                             $Assigned_Data[] = $employee;
+    //                         } else {
+    //                             $No_Work_Data[] = $employee;
+    //                         }
+    //                     }
+
+    //                     $NoWork_Employee_Sql1 = "SELECT Work.Type AS Type, Work.*
+    //                         FROM Web_Employee_Work_Allocation_Mst AS Work
+    //                         INNER JOIN UserDetails_Det AS Login
+    //                             ON Login.Lcode = Work.Lcode
+    //                             AND Login.Name = Work.Sub_Department
+    //                         WHERE Login.UserID = '$Login_User'
+    //                           AND Work.Date = '$Date'
+    //                           AND Work.Shift = '$Shift'
+    //                           AND Work.Work_Type = 'NoWork'
+    //                           AND Work.Work_Status = '1'
+    //                           AND Work.Assign_Status = '0'";
+
+    //                     $user_dept_sql = "SELECT Name FROM UserDetails_Det
+    //                                       WHERE UserID = '$Login_User'
+    //                                       AND Ccode = '$CompanyCode'
+    //                                       AND Lcode = '$LocationCode'";
+    //                     $user_dept = $this->db->query($user_dept_sql)->row();
+    //                     $deptName = $user_dept ? $user_dept->Name : '';
+
+    //                     if ($deptName == 'HRD' || $deptName == 'Human Resource Services') {
+    //                         $NoWorkEmployeeList1 = $this->db->query($NoWork_Employee_Sql1)->result();
+    //                         $All_Employee_List = array_merge($Assigned_Data, $Un_Assigned_Data);
+    //                         return $All_Employee_List;
+    //                     } else {
+    //                         $NoWorkEmployeeList1 = $this->db->query($NoWork_Employee_Sql1)->result();
+    //                         $All_Employee_List = array_merge($Assigned_Data, $Un_Assigned_Data, $NoWorkEmployeeList1);
+    //                         return $All_Employee_List;
+    //                     }
+    //                 }
+    //             }
+    //         } else {
+    //             redirect(base_url(), 'refresh');
+    //         }
+    //     }
+
+
+
+
+    // Default Allocation Remove Allocation Logic Function
     public function Shift_Employee_List($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Type)
     {
         $Session = $this->session->userdata('sess_array');
         if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
 
-            $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Shift'";
-            $shift_Data = $this->db->query($sql1)->row();
 
-            if ($shift_Data) {
-                $Shift_Pounch_Start = $shift_Data->StartIN;
-                $Shift_Pounch_End = $shift_Data->EndIN;
-                $Shift_Date_Convert = $Date;
+          if ($LocationCode == 'PRECOT - A') {
 
-                $Shift_Date_Conversion = ($shift_Data->StartIN_Days == 1 && $shift_Data->EndIN_Days == 1)
-                    ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
-                    : $Shift_Date_Convert;
+    $sql1 = "SELECT StartIN, EndIN, StartIN_Days, EndIN_Days FROM Shift_Mst 
+             WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Shift'";
+    $shift_Data = $this->db->query($sql1)->row();
 
-                $Shift_Master = [
-                    'SHIFT1' => 'SHIFT1',
-                    'SHIFT2' => 'SHIFT2',
-                    'SHIFT3' => 'SHIFT3',
-                    'SHIFT4' => 'SHIFT4',
-                ];
+    if ($shift_Data) {
 
-                $Current_Shift = $Shift;
+        $Shift_Pounch_Start = $shift_Data->StartIN;
+        $Shift_Pounch_End = ($Shift == 'SHIFT2') ? '17:15' : $shift_Data->EndIN;
 
-                function getPreviousShift($currentShift, $shiftMaster)
-                {
-                    $shiftKeys = array_keys($shiftMaster);
-                    if (in_array($currentShift, $shiftKeys)) {
-                        $currentIndex = array_search($currentShift, $shiftKeys);
-                        $previousIndex = ($currentIndex - 1) < 0 ? count($shiftKeys) - 1 : $currentIndex - 1;
-                        return $shiftKeys[$previousIndex];
+        $Shift_Date_Convert = $Date;
+        $Shift_Date_Conversion = ($shift_Data->StartIN_Days == 1 && $shift_Data->EndIN_Days == 1)
+            ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
+            : $Shift_Date_Convert;
+
+        $Shift_Master = ['SHIFT1' => 'SHIFT1', 'SHIFT2' => 'SHIFT2', 'SHIFT3' => 'SHIFT3', 'SHIFT4' => 'SHIFT4'];
+        $Current_Shift = $Shift;
+
+        function getPreviousShift($currentShift, $shiftMaster) {
+            $shiftKeys = array_keys($shiftMaster);
+            if (in_array($currentShift, $shiftKeys)) {
+                $currentIndex = array_search($currentShift, $shiftKeys);
+                $previousIndex = ($currentIndex - 1) < 0 ? count($shiftKeys) - 1 : $currentIndex - 1;
+                return $shiftKeys[$previousIndex];
+            }
+            return null;
+        }
+
+        $Previous_Shift = getPreviousShift($Current_Shift, $Shift_Master);
+
+        $Employee_Shift_Sql = "SELECT EmpNo FROM Web_Employee_Work_Allocation_Mst Work
+            INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+            WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+            AND Work.Date = '$Date' AND Work.Shift = '$Previous_Shift'
+            AND Work.Work_Status = '1' AND Login.UserID = '$Login_User' AND Work.Closing_Status = '0'";
+
+        $Employee_Shift_Query = $this->db->query($Employee_Shift_Sql);
+
+        if ($Employee_Shift_Query->num_rows() > 0) {
+            return ['Status' => 'Error', 'Message' => 'Kindly close the ' . $Previous_Shift . ' shift and verify it.'];
+        } else {
+            $sql2 = "SELECT DISTINCT Time.MachineID, Emp.FirstName, Emp.Wages, Emp.WorkArea, Emp.JobCardNo,
+                Emp.DeptName, Emp.DeptGrp, Emp.SubSection_Name
+                FROM UserDetails_Det Log
+                INNER JOIN Employee_Mst Emp ON Log.Lcode = Emp.LocCode AND Log.Name = Emp.DeptName
+                INNER JOIN LogTime_IN Time ON Time.MachineID = Emp.MachineID
+                WHERE Log.UserID = '$Login_User'
+                AND CONVERT(DATE, Time.TimeIN) = '$Shift_Date_Conversion'
+                AND Time.TimeIN BETWEEN '$Shift_Date_Conversion $Shift_Pounch_Start' AND '$Shift_Date_Conversion $Shift_Pounch_End'
+                AND Emp.CatName = 'WORKER'
+                AND Time.CompCode = '$CompanyCode'
+                AND Time.LocCode = '$LocationCode'
+                AND Emp.IsActive = 'Yes'";
+
+            $log_Data = $this->db->query($sql2)->result();
+            $current_time = date('Y-m-d H:i:s');
+            $batchInsert = [];
+
+            foreach ($log_Data as $Employee_Data) {
+
+                $Employee_Id = $Employee_Data->MachineID;
+
+                $existing_sql = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst
+                    WHERE Date = '$Date' AND Shift = '$Shift'
+                    AND EmpNo = '$Employee_Id' AND Work_Status = '1'";
+
+                if ($this->db->query($existing_sql)->num_rows() == 0) {
+
+                    if ($Shift == 'SHIFT1') {
+                        $Previous_Date = date('Y-m-d', strtotime($Shift_Date_Convert . ' -1 days'));
+                        $Sql_OT_PreviousDay = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst Work
+                            INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                            WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                            AND Work.Date = '$Previous_Date' AND Work.EmpNo = '$Employee_Id'
+                            AND Work.Shift = 'SHIFT3' AND Work.Work_Status = '1'
+                            AND Login.UserID = '$Login_User'";
+                        $this->db->query($Sql_OT_PreviousDay);
                     }
-                    return null;
-                }
 
-                $Previous_Shift = ($Current_Shift == 'SHIFT1') ? '' : getPreviousShift($Current_Shift, $Shift_Master);
+                    $Sql_OT = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst Work
+                        INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                        WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                        AND Work.Date = '$Date' AND Work.EmpNo = '$Employee_Id'
+                        AND Work.Shift = '$Previous_Shift' AND Work.Work_Status = '1'
+                        AND Login.UserID = '$Login_User'";
 
-                $Employee_Shift_Sql = "SELECT EmpNo FROM Web_Employee_Work_Allocation_Mst Work
-                    INNER JOIN UserDetails_Det Login
-                        ON Work.Lcode = Login.Lcode
-                        AND Work.Ccode = Login.Ccode
-                        AND Login.Name = Work.Sub_Department
-                    WHERE Work.Lcode = '$LocationCode'
-                        AND Login.Ccode = '$CompanyCode'
-                        AND Work.Date = '$Date'
-                        AND Work.Shift = '$Previous_Shift'
-                        AND Work.Work_Status = '1'
-                        AND Login.UserID = '$Login_User'
-                        AND Work.Closing_Status = '0'";
+                    $Query_OT = $this->db->query($Sql_OT);
 
-                $Employee_Shift_Query = $this->db->query($Employee_Shift_Sql);
-
-                if ($Employee_Shift_Query->num_rows() > 0) {
-                    return [
-                        'Status' => 'Error',
-                        'Message' => 'Kindly close the ' . $Previous_Shift . ' shift and verify it.'
+                    $batchInsert[] = [
+                        'Ccode' => $CompanyCode,
+                        'Lcode' => $LocationCode,
+                        'Wages' => $Employee_Data->Wages,
+                        'FirstName' => $Employee_Data->FirstName,
+                        'EmpNo' => $Employee_Id,
+                        'ExistingCode' => $Employee_Id,
+                        'Shift' => $Shift,
+                        'Date' => $Date,
+                        'Job_Card_No' => $Employee_Data->JobCardNo,
+                        'Department' => $Employee_Data->DeptGrp,
+                        'Sub_Department' => $Employee_Data->DeptName,
+                        'Sub_Section' => $Employee_Data->SubSection_Name,
+                        'WorkArea' => $Employee_Data->WorkArea,
+                        'OT_Confirmation' => '-',
+                        'Machine_Id' => '',
+                        'Machine_Name' => '-',
+                        'FrameType' => '-',
+                        'Frame' => '',
+                        'Type' => $Type,
+                        'Screen_Type' => 'Shift_Employee_Screen',
+                        'Work_Type' => $Query_OT->num_rows() == 1 ? 'OT' : 'SHIFT',
+                        'Status_Updated' => '',
+                        'Work_Start' => '-',
+                        'Work_End' => '-',
+                        'Work_Duration' => '-',
+                        'Machine_EB_No' => '-',
+                        'Work_Status' => '1',
+                        'Assign_Status' => '0',
+                        'Closing_Status' => '0',
+                        'IsWork' => '0',
+                        'Edit_Reason' => '-',
+                        'Description' => '',
+                        'Created_By' => $Login_User,
+                        'Created_Time' => $current_time,
+                        'Updated_By' => '-',
+                        'Updated_Time' => '-',
+                        'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : 'SHIFT',
+                        'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
                     ];
+                }
+            }
+
+            if (!empty($batchInsert)) {
+                $this->db->insert_batch('Web_Employee_Work_Allocation_Mst', $batchInsert);
+            }
+
+            $NoWork_Sql = "UPDATE Work
+                SET Work.Sub_Department = Login.Name, Work.WorkArea = '', Work.Job_Card_No = ''
+                FROM Web_Employee_Work_Allocation_Mst AS Work
+                INNER JOIN UserDetails_Det AS Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode
+                WHERE Work.Date = '$Date' AND Work.Shift = '$Shift'
+                AND Work.Work_Type = 'NoWork' AND Work.Work_Status = '1'
+                AND Work.Assign_Status = '0' AND Work.Lcode = '$LocationCode'
+                AND Login.Ccode = '$CompanyCode' AND Login.UserID = '$Login_User'";
+
+            $this->db->query($NoWork_Sql);
+
+            $sql4 = "SELECT Work.Type AS Type, Work.*,
+                CASE
+                    WHEN Work.Assign_Status = '0' THEN 'Unassigned'
+                    WHEN Work.Work_Type = 'NoWork' THEN 'NoWork'
+                    ELSE 'Assigned'
+                END AS WorkStatus
+                FROM Web_Employee_Work_Allocation_Mst AS Work
+                INNER JOIN UserDetails_Det AS Login ON Login.Lcode = Work.Lcode AND Login.Name = Work.Sub_Department
+                WHERE Login.UserID = '$Login_User' AND Work.Date = '$Date' AND Work.Lcode = '$LocationCode'
+                AND Work.Shift = '$Shift' AND Work.Work_Status = '1'";
+
+            $employee_data = $this->db->query($sql4)->result();
+            $Un_Assigned_Data = [];
+            $Assigned_Data = [];
+            $No_Work_Data = [];
+
+            foreach ($employee_data as $employee) {
+                if ($employee->WorkStatus == 'Unassigned') {
+                    $Un_Assigned_Data[] = $employee;
+                } elseif ($employee->WorkStatus == 'Assigned') {
+                    $Assigned_Data[] = $employee;
                 } else {
-                    $sql2 = "SELECT DISTINCT
-                            Time.MachineID, Emp.FirstName, Emp.Wages, Emp.WorkArea, Emp.JobCardNo,
-                            Emp.DeptName, Emp.DeptGrp, Emp.SubSection_Name
-                        FROM UserDetails_Det Log
-                        INNER JOIN Employee_Mst Emp ON Log.Lcode = Emp.LocCode AND Log.Name = Emp.DeptName
-                        INNER JOIN LogTime_IN Time ON Time.MachineID = Emp.MachineID
-                        WHERE Log.UserID = '$Login_User'
-                            AND CONVERT(DATE, Time.TimeIN) = '$Shift_Date_Conversion'
-                            AND Time.TimeIN BETWEEN '$Shift_Date_Conversion $Shift_Pounch_Start' AND '$Shift_Date_Conversion $Shift_Pounch_End'
-                            AND Emp.CatName != 'STAFF'
-                            AND Time.CompCode = '$CompanyCode'
-                            AND Time.LocCode = '$LocationCode'
-                            AND Emp.IsActive = 'Yes'";
+                    $No_Work_Data[] = $employee;
+                }
+            }
+
+            $NoWork_Employee_Sql1 = "SELECT DISTINCT Work.EmpNo
+                                    FROM Web_Employee_Work_Allocation_Mst AS Work
+                                    INNER JOIN UserDetails_Det AS Login
+                                        ON Login.Lcode = Work.Lcode AND Login.Name = Work.Sub_Department
+                                    WHERE Login.UserID = '$Login_User'
+                                        AND Work.Date = '$Date' AND Work.Shift = '$Shift' AND Work.Lcode = '$LocationCode'
+                                        AND Work.Work_Type = 'NoWork' AND Work.Work_Status = '1'
+                                        AND Work.Assign_Status = '0'";
+
+
+            $user_dept_sql = "SELECT Name FROM UserDetails_Det
+                WHERE UserID = '$Login_User' AND Ccode = '$CompanyCode' AND Lcode = '$LocationCode'";
+
+            $user_dept = $this->db->query($user_dept_sql)->row();
+            $deptName = $user_dept ? $user_dept->Name : '';
+            $NoWorkEmployeeList1 = $this->db->query($NoWork_Employee_Sql1)->result();
+
+            if ($deptName == 'HRD' || $deptName == 'Human Resource Services') {
+                return array_merge($Assigned_Data, $Un_Assigned_Data);
+            } else {
+                return array_merge($Assigned_Data, $Un_Assigned_Data, $NoWorkEmployeeList1);
+            }
+        }
+    }
+}
+ else if ($LocationCode == 'PRECOT - C' || $LocationCode == 'PRECOT - D') {
 
 
 
+                $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Shift'";
+                $shift_Data = $this->db->query($sql1)->row();
 
-                    $log_Data = $this->db->query($sql2)->result();
-                    $current_time = date('Y-m-d H:i:s');
-
-                    foreach ($log_Data as $Employee_Data) {
-                        $Employee_Id = $Employee_Data->MachineID;
-                        $Employee_WorkArea = $Employee_Data->WorkArea;
-                        $Employee_Department = $Employee_Data->DeptName;
-
-                        $existing_sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst
-                            WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id' AND Work_Status = '1'";
-
-                        if ($this->db->query($existing_sql)->num_rows() == 0) {
-
-                            $Work_Check_Sql = "SELECT * FROM Web_Work_Area_Mst Work
-                                INNER JOIN Web_Machine_Mst Machine
-                                    ON Work.Ccode = Machine.Ccode
-                                    AND Work.Lcode = Machine.Lcode
-                                    AND Work.WorkArea = Machine.WorkArea
-                                    AND Work.Department = Machine.Department
-                                WHERE Machine.WorkArea = '$Employee_WorkArea'
-                                    AND Work.Department = '$Employee_Department'";
-
-                            $Work_Check_Query = $this->db->query($Work_Check_Sql);
-                            $Work_Check_Rows = $Work_Check_Query->num_rows();
-
-                            $allocations = [
-                                'Ccode' => $CompanyCode,
-                                'Lcode' => $LocationCode,
-                                'Wages' => $Employee_Data->Wages,
-                                'FirstName' => $Employee_Data->FirstName,
-                                'EmpNo' => $Employee_Id,
-                                'ExistingCode' => $Employee_Id,
-                                'Shift' => $Shift,
-                                'Date' => $Date,
-                                'Job_Card_No' => $Employee_Data->JobCardNo,
-                                'Department' => $Employee_Data->DeptGrp,
-                                'Sub_Department' => $Employee_Data->DeptName,
-                                'Sub_Section' => $Employee_Data->SubSection_Name,
-                                'WorkArea' => $Employee_Data->WorkArea,
-                                'Previous_Shift' => '-',
-                                'OT_Confirmation' => '-',
-                                'Working_Type' => 'SHIFT',
-                                'Machine_Id' => '',
-                                'Machine_Name' => '-',
-                                'FrameType' => '-',
-                                'Frame' => ($Work_Check_Rows == 0) ? 'Others' : '-',
-                                'Type' => $Type,
-                                'Screen_Type' => 'Shift_Employee_Screen',
-                                'Work_Type' => ($Work_Check_Rows == 0) ? 'Others' : '-',
-                                'Status_Updated' => ($Work_Check_Rows == 0) ? 'Others' : '-',
-                                'Work_Start' => '-',
-                                'Work_End' => '-',
-                                'Work_Duration' => '-',
-                                'Machine_EB_No' => '-',
-                                'Work_Status' => '1',
-                                'Assign_Status' => ($Work_Check_Rows == 0) ? '1' : '0',
-                                'Closing_Status' => '0',
-                                'IsWork' => '0',
-                                'Edit_Reason' => '-',
-                                'Description' => $Employee_Data->WorkArea,
-                                'Created_By' => $Login_User,
-                                'Created_Time' => $current_time,
-                                'Updated_By' => '-',
-                                'Updated_Time' => '-',
-                            ];
-
-                            $this->db->insert('Web_Employee_Work_Allocation_Mst', $allocations);
-                        }
+                if ($shift_Data) {
+                    if ($Shift == 'SHIFT2') {
+                        $Shift_Pounch_Start = $shift_Data->StartIN;
+                        $Shift_Pounch_End = '17:15';
+                        $Shift_Date_Convert = $Date;
+                    } else {
+                        $Shift_Pounch_Start = $shift_Data->StartIN;
+                        $Shift_Pounch_End = $shift_Data->EndIN;
                     }
 
-                    $NoWork_Sql = "UPDATE Work
-                            SET
-                                Work.Sub_Department = Login.Name,
-                                Work.WorkArea = '',
-                                Work.Job_Card_No = ''
-                            FROM Web_Employee_Work_Allocation_Mst AS Work
-                            INNER JOIN UserDetails_Det AS Login
-                                ON Work.Lcode = Login.Lcode
-                                AND Work.Ccode = Login.Ccode
-                            WHERE
-                                Work.Date = '$Date'
-                                AND Work.Shift = '$Shift'
-                                AND Work.Work_Type = 'NoWork'
-                                AND Work.Work_Status = '1'
-                                AND Work.Assign_Status = '0'
-                                AND Work.Lcode = '$LocationCode'
-                                AND Login.Ccode = '$CompanyCode'
-                                AND Login.UserID = '$Login_User'";
+                    $Shift_Date_Convert = $Date;
 
-                    $this->db->query($NoWork_Sql);
+                    $Shift_Date_Conversion = ($shift_Data->StartIN_Days == 1 && $shift_Data->EndIN_Days == 1)
+                        ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
+                        : $Shift_Date_Convert;
 
-                    $sql4 = "SELECT Work.Type AS Type,
-                        Work.*,
+                    $Shift_Master = [
+
+                        'SHIFT1' => 'SHIFT1',
+                        'SHIFT2' => 'SHIFT2',
+                        'SHIFT3' => 'SHIFT3',
+
+                    ];
+
+                    $Current_Shift = $Shift;
+
+                    function getPreviousShift($currentShift, $shiftMaster)
+                    {
+                        $shiftKeys = array_keys($shiftMaster);
+                        if (in_array($currentShift, $shiftKeys)) {
+                            $currentIndex = array_search($currentShift, $shiftKeys);
+                            $previousIndex = ($currentIndex - 1) < 0 ? count($shiftKeys) - 1 : $currentIndex - 1;
+                            return $shiftKeys[$previousIndex];
+                        }
+                        return null;
+                    }
+
+                    $Previous_Shift = ($Current_Shift == 'SHIFT1') ? '' : getPreviousShift($Current_Shift, $Shift_Master);
+
+                    $Employee_Shift_Sql = "SELECT EmpNo FROM Web_Employee_Work_Allocation_Mst Work
+                INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode
+                    AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                    AND Work.Date = '$Date' AND Work.Shift = '$Previous_Shift'
+                    AND Work.Work_Status = '1' AND Login.UserID = '$Login_User'
+                    AND Work.Closing_Status = '0'";
+
+                    $Employee_Shift_Query = $this->db->query($Employee_Shift_Sql);
+
+                    if ($Employee_Shift_Query->num_rows() > 0) {
+                        return [
+                            'Status' => 'Error',
+                            'Message' => 'Kindly close the ' . $Previous_Shift . ' shift and verify it.'
+                        ];
+                    } else {
+                        $sql2 = "SELECT DISTINCT
+                        Time.MachineID, Emp.FirstName, Emp.Wages, Emp.WorkArea, Emp.JobCardNo,
+                        Emp.DeptName, Emp.DeptGrp, Emp.SubSection_Name
+                    FROM UserDetails_Det Log
+                    INNER JOIN Employee_Mst Emp ON Log.Lcode = Emp.LocCode AND Log.Name = Emp.DeptName
+                    INNER JOIN LogTime_IN Time ON Time.MachineID = Emp.MachineID
+                    WHERE Log.UserID = '$Login_User'
+                        AND CONVERT(DATE, Time.TimeIN) = '$Shift_Date_Conversion'
+                        AND Time.TimeIN BETWEEN '$Shift_Date_Conversion $Shift_Pounch_Start' AND '$Shift_Date_Conversion $Shift_Pounch_End'
+                        AND Emp.CatName = 'WORKER'
+                        AND Time.CompCode = '$CompanyCode'
+                        AND Time.LocCode = '$LocationCode'
+                        AND Emp.IsActive = 'Yes'";
+
+
+
+                        $log_Data = $this->db->query($sql2)->result();
+                        $current_time = date('Y-m-d H:i:s');
+
+                        foreach ($log_Data as $Employee_Data) {
+                            $Employee_Id = $Employee_Data->MachineID;
+                            $Employee_WorkArea = $Employee_Data->WorkArea;
+                            $Employee_Department = $Employee_Data->DeptName;
+
+                            $existing_sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst
+                        WHERE Date = '$Date' AND Shift = '$Shift'
+                        AND EmpNo = '$Employee_Id' AND Work_Status = '1'";
+
+                            if ($this->db->query($existing_sql)->num_rows() == 0) {
+
+
+                                $Sql_OT = "SELECT EmpNo FROM Web_Employee_Work_Allocation_Mst Work
+                            INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode
+                                AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                            WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                                AND Work.Date = '$Date' AND Work.EmpNo = '$Employee_Id'
+                                AND Work.Shift = '$Previous_Shift' AND Work.Work_Status = '1'
+                                AND Work.Assign_Status = '1' AND Login.UserID = '$Login_User'
+                                AND Work.Closing_Status = '1'";
+
+                                $Query_OT = $this->db->query($Sql_OT);
+
+                                $allocations = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Employee_Data->Wages,
+                                    'FirstName' => $Employee_Data->FirstName,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $Employee_Id,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Employee_Data->JobCardNo,
+                                    'Department' => $Employee_Data->DeptGrp,
+                                    'Sub_Department' => $Employee_Data->DeptName,
+                                    'Sub_Section' => $Employee_Data->SubSection_Name,
+                                    'WorkArea' => $Employee_Data->WorkArea,
+                                    'Previous_Shift' => '-',
+                                    'OT_Confirmation' => '-',
+                                    'Machine_Id' => '',
+                                    'Machine_Name' => '-',
+                                    'FrameType' => '-',
+                                    'Frame' => '',
+                                    'Type' => $Type,
+                                    'Screen_Type' => 'Shift_Employee_Screen',
+                                    'Work_Type' => '',
+                                    'Status_Updated' => '',
+                                    'Work_Start' => '-',
+                                    'Work_End' => '-',
+                                    'Work_Duration' => '-',
+                                    'Machine_EB_No' => '-',
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '0',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '0',
+                                    'Edit_Reason' => '-',
+                                    'Description' => '',
+                                    'Created_By' => $Login_User,
+                                    'Created_Time' => $current_time,
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                ];
+
+                                if ($Query_OT->num_rows() == 1) {
+                                    $allocations['Working_Type'] = 'OT';
+                                    $this->db->insert('Web_Employee_Work_Allocation_Mst', $allocations);
+                                }
+
+                                $allocations['Working_Type'] = 'SHIFT';
+                                $this->db->insert('Web_Employee_Work_Allocation_Mst', $allocations);
+                            }
+                        }
+
+
+                        if ($LocationCode == 'PRECOT - C') {
+
+                            $NoWork_Sql = "UPDATE Work
+                        SET Work.Sub_Department = Login.Name,
+                            Work.WorkArea = '',
+                            Work.Job_Card_No = '',
+                            Work.Lcode = 'PRECOT - D'
+                        FROM Web_Employee_Work_Allocation_Mst AS Work
+                        INNER JOIN UserDetails_Det AS Login
+                            ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode
+                        WHERE Work.Date = '$Date' AND Work.Shift = '$Shift'
+                            AND Work.Work_Type = 'NoWork' AND Work.Work_Status = '1'
+                            AND Work.Assign_Status = '0' 
+                            AND Login.Ccode = '$CompanyCode' AND Login.UserID = '$Login_User'";
+
+                            $this->db->query($NoWork_Sql);
+                        } else  if ($LocationCode == 'PRECOT - D') {
+
+
+                            $NoWork_Sql = "UPDATE Work
+                        SET Work.Sub_Department = Login.Name,
+                            Work.WorkArea = '',
+                            Work.Job_Card_No = '',
+                            Work.Lcode = 'PRECOT - C'
+                        FROM Web_Employee_Work_Allocation_Mst AS Work
+                        INNER JOIN UserDetails_Det AS Login
+                            ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode
+                        WHERE Work.Date = '$Date' AND Work.Shift = '$Shift'
+                            AND Work.Work_Type = 'NoWork' AND Work.Work_Status = '1'
+                            AND Work.Assign_Status = '0' 
+                            AND Login.Ccode = '$CompanyCode' AND Login.UserID = '$Login_User'";
+
+                            $this->db->query($NoWork_Sql);
+                        }
+
+
+
+                        $NoWork_Sql  = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Date = '$Date' AND Shift = '$Shift' AND Work_Type  = 'NoWork' AND Work_Status = '1' AND Assign_Status = '0'";
+                        $Nowork_Query = $this->db->query($NoWork_Sql);
+                        $Nowork_Employee = $Nowork_Query->result();
+
+
+
+                        $sql4 = "SELECT Work.Type AS Type, Work.*,
                         CASE
                             WHEN Work.Assign_Status = '0' THEN 'Unassigned'
                             WHEN Work.Work_Type = 'NoWork' THEN 'NoWork'
                             ELSE 'Assigned'
                         END AS WorkStatus
-                     FROM Web_Employee_Work_Allocation_Mst AS Work
-                     INNER JOIN UserDetails_Det AS Login
-                         ON Login.Lcode = Work.Lcode
-                         AND Login.Name = Work.Sub_Department
-                     WHERE Login.UserID = '$Login_User'
-                       AND Work.Date = '$Date'
-                       AND Work.Shift = '$Shift'
-                       AND Work.Work_Status = '1'";
+                    FROM Web_Employee_Work_Allocation_Mst AS Work
+                    INNER JOIN UserDetails_Det AS Login
+                        ON Login.Lcode = Work.Lcode AND Login.Name = Work.Sub_Department
+                    WHERE Login.UserID = '$Login_User' AND Work.Date = '$Date'
+                        AND Work.Shift = '$Shift' AND Work.Work_Status = '1'";
 
-                    $employee_data = $this->db->query($sql4)->result();
-                    $Un_Assigned_Data = [];
-                    $Assigned_Data = [];
-                    $No_Work_Data = [];
+                        $employee_data = $this->db->query($sql4)->result();
+                        $Un_Assigned_Data = [];
+                        $Assigned_Data = [];
+                        $No_Work_Data = [];
 
-                    foreach ($employee_data as $employee) {
-                        if ($employee->WorkStatus == 'Unassigned') {
-                            $Un_Assigned_Data[] = $employee;
-                        } elseif ($employee->WorkStatus == 'Assigned') {
-                            $Assigned_Data[] = $employee;
+                        foreach ($employee_data as $employee) {
+                            if ($employee->WorkStatus == 'Unassigned') {
+                                $Un_Assigned_Data[] = $employee;
+                            } elseif ($employee->WorkStatus == 'Assigned') {
+                                $Assigned_Data[] = $employee;
+                            } else {
+                                $No_Work_Data[] = $employee;
+                            }
+                        }
+
+                        $NoWork_Employee_Sql1 = "SELECT Work.Type AS Type, Work.*
+                    FROM Web_Employee_Work_Allocation_Mst AS Work
+                    INNER JOIN UserDetails_Det AS Login
+                        ON Login.Lcode = Work.Lcode AND Login.Name = Work.Sub_Department
+                    WHERE Login.UserID = '$Login_User'
+                        AND Work.Date = '$Date' AND Work.Shift = '$Shift'
+                        AND Work.Work_Type = 'NoWork' AND Work.Work_Status = '1'
+                        AND Work.Assign_Status = '0'";
+
+                        $user_dept_sql = "SELECT Name FROM UserDetails_Det
+                    WHERE UserID = '$Login_User' AND Ccode = '$CompanyCode' AND Lcode = '$LocationCode'";
+                        $user_dept = $this->db->query($user_dept_sql)->row();
+                        $deptName = $user_dept ? $user_dept->Name : '';
+
+                        if ($deptName == 'HRD' || $deptName == 'Human Resource Services') {
+                            $NoWorkEmployeeList1 = $this->db->query($NoWork_Employee_Sql1)->result();
+                            $All_Employee_List = array_merge($Assigned_Data, $Un_Assigned_Data);
+                            return $All_Employee_List;
                         } else {
-                            $No_Work_Data[] = $employee;
+                            $NoWorkEmployeeList1 = $this->db->query($NoWork_Employee_Sql1)->result();
+                            $All_Employee_List = array_merge($Assigned_Data, $Un_Assigned_Data, $NoWorkEmployeeList1, $Nowork_Employee);
+                            return $All_Employee_List;
                         }
                     }
+                }
+            } else if ($LocationCode == 'PRECOT - M') {
 
-                    $NoWork_Employee_Sql1 = "SELECT Work.Type AS Type, Work.*
-                        FROM Web_Employee_Work_Allocation_Mst AS Work
-                        INNER JOIN UserDetails_Det AS Login
-                            ON Login.Lcode = Work.Lcode
-                            AND Login.Name = Work.Sub_Department
-                        WHERE Login.UserID = '$Login_User'
-                          AND Work.Date = '$Date'
-                          AND Work.Shift = '$Shift'
-                          AND Work.Work_Type = 'NoWork'
-                          AND Work.Work_Status = '1'
-                          AND Work.Assign_Status = '0'";
+                $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Shift'";
+                $shift_Data = $this->db->query($sql1)->row();
 
-                    $user_dept_sql = "SELECT Name FROM UserDetails_Det
-                                      WHERE UserID = '$Login_User'
-                                      AND Ccode = '$CompanyCode'
-                                      AND Lcode = '$LocationCode'";
-                    $user_dept = $this->db->query($user_dept_sql)->row();
-                    $deptName = $user_dept ? $user_dept->Name : '';
-
-                    if ($deptName == 'HRD' || $deptName == 'Human Resource Services') {
-                        $NoWorkEmployeeList1 = $this->db->query($NoWork_Employee_Sql1)->result();
-                        $All_Employee_List = array_merge($Assigned_Data, $Un_Assigned_Data);
-                        return $All_Employee_List;
+                if ($shift_Data) {
+                    if ($Shift == 'SHIFT2') {
+                        $Shift_Pounch_Start = $shift_Data->StartIN;
+                        $Shift_Pounch_End = '17:15';
+                        $Shift_Date_Convert = $Date;
                     } else {
-                        $NoWorkEmployeeList1 = $this->db->query($NoWork_Employee_Sql1)->result();
-                        $All_Employee_List = array_merge($Assigned_Data, $Un_Assigned_Data, $NoWorkEmployeeList1);
-                        return $All_Employee_List;
+                        $Shift_Pounch_Start = $shift_Data->StartIN;
+                        $Shift_Pounch_End = $shift_Data->EndIN;
+                    }
+
+                    $Shift_Date_Convert = $Date;
+
+                    $Shift_Date_Conversion = ($shift_Data->StartIN_Days == 1 && $shift_Data->EndIN_Days == 1)
+                        ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
+                        : $Shift_Date_Convert;
+
+                    $Shift_Master = [
+                        'SHIFT1' => 'SHIFT1',
+                        'SHIFT2' => 'SHIFT2',
+                        'SHIFT3' => 'SHIFT3',
+                    ];
+
+                    $Current_Shift = $Shift;
+
+                    function getPreviousShift($currentShift, $shiftMaster)
+                    {
+                        $shiftKeys = array_keys($shiftMaster);
+                        if (in_array($currentShift, $shiftKeys)) {
+                            $currentIndex = array_search($currentShift, $shiftKeys);
+                            $previousIndex = ($currentIndex - 1) < 0 ? count($shiftKeys) - 1 : $currentIndex - 1;
+                            return $shiftKeys[$previousIndex];
+                        }
+                        return null;
+                    }
+
+                    $Previous_Shift = ($Current_Shift == 'SHIFT1') ? '' : getPreviousShift($Current_Shift, $Shift_Master);
+
+                    $Employee_Shift_Sql = "SELECT EmpNo FROM Web_Employee_Work_Allocation_Mst Work
+                INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode
+                    AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                    AND Work.Date = '$Date' AND Work.Shift = '$Previous_Shift'
+                    AND Work.Work_Status = '1' AND Login.UserID = '$Login_User'
+                    AND Work.Closing_Status = '0'";
+
+                    $Employee_Shift_Query = $this->db->query($Employee_Shift_Sql);
+
+                    if ($Employee_Shift_Query->num_rows() > 0) {
+                        return [
+                            'Status' => 'Error',
+                            'Message' => 'Kindly close the ' . $Previous_Shift . ' shift and verify it.'
+                        ];
+                    } else {
+                        $sql2 = "SELECT DISTINCT
+                        Time.MachineID, Emp.FirstName, Emp.Wages, Emp.WorkArea, Emp.JobCardNo,
+                        Emp.DeptName, Emp.DeptGrp, Emp.SubSection_Name
+                    FROM UserDetails_Det Log
+                    INNER JOIN Employee_Mst Emp ON Log.Lcode = Emp.LocCode AND Log.Name = Emp.DeptName
+                    INNER JOIN LogTime_IN Time ON Time.MachineID = Emp.MachineID
+                    WHERE Log.UserID = '$Login_User'
+                        AND CONVERT(DATE, Time.TimeIN) = '$Shift_Date_Conversion'
+                        AND Time.TimeIN BETWEEN '$Shift_Date_Conversion $Shift_Pounch_Start' AND '$Shift_Date_Conversion $Shift_Pounch_End'
+                        AND Emp.CatName = 'WORKER'
+                        AND Time.CompCode = '$CompanyCode'
+                        AND Time.LocCode = '$LocationCode'
+                        AND Emp.IsActive = 'Yes'";
+
+
+
+                        $log_Data = $this->db->query($sql2)->result();
+                        $current_time = date('Y-m-d H:i:s');
+
+                        foreach ($log_Data as $Employee_Data) {
+                            $Employee_Id = $Employee_Data->MachineID;
+                            $Employee_WorkArea = $Employee_Data->WorkArea;
+                            $Employee_Department = $Employee_Data->DeptName;
+
+                            $existing_sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst
+                        WHERE Date = '$Date' AND Shift = '$Shift'
+                        AND EmpNo = '$Employee_Id' AND Work_Status = '1'";
+
+                            if ($this->db->query($existing_sql)->num_rows() == 0) {
+
+
+                                $Sql_OT = "SELECT EmpNo FROM Web_Employee_Work_Allocation_Mst Work
+                            INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode
+                                AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                            WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                                AND Work.Date = '$Date' AND Work.EmpNo = '$Employee_Id'
+                                AND Work.Shift = '$Previous_Shift' AND Work.Work_Status = '1'
+                                AND Work.Assign_Status = '1' AND Login.UserID = '$Login_User'
+                                AND Work.Closing_Status = '1'";
+
+                                $Query_OT = $this->db->query($Sql_OT);
+
+                                $allocations = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Employee_Data->Wages,
+                                    'FirstName' => $Employee_Data->FirstName,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $Employee_Id,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Employee_Data->JobCardNo,
+                                    'Department' => $Employee_Data->DeptGrp,
+                                    'Sub_Department' => $Employee_Data->DeptName,
+                                    'Sub_Section' => $Employee_Data->SubSection_Name,
+                                    'WorkArea' => $Employee_Data->WorkArea,
+                                    'Previous_Shift' => '-',
+                                    'OT_Confirmation' => '-',
+                                    'Machine_Id' => '',
+                                    'Machine_Name' => '-',
+                                    'FrameType' => '-',
+                                    'Frame' => '',
+                                    'Type' => $Type,
+                                    'Screen_Type' => 'Shift_Employee_Screen',
+                                    'Work_Type' => '',
+                                    'Status_Updated' => '',
+                                    'Work_Start' => '-',
+                                    'Work_End' => '-',
+                                    'Work_Duration' => '-',
+                                    'Machine_EB_No' => '-',
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '0',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '0',
+                                    'Edit_Reason' => '-',
+                                    'Description' => '',
+                                    'Created_By' => $Login_User,
+                                    'Created_Time' => $current_time,
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                ];
+
+                                if ($Query_OT->num_rows() == 1) {
+                                    $allocations['Working_Type'] = 'OT';
+                                    $this->db->insert('Web_Employee_Work_Allocation_Mst', $allocations);
+                                }
+
+                                $allocations['Working_Type'] = 'SHIFT';
+                                $this->db->insert('Web_Employee_Work_Allocation_Mst', $allocations);
+                            }
+                        }
+
+                        $NoWork_Sql = "UPDATE Work
+                    SET Work.Sub_Department = Login.Name,
+                        Work.WorkArea = '',
+                        Work.Job_Card_No = ''
+                    FROM Web_Employee_Work_Allocation_Mst AS Work
+                    INNER JOIN UserDetails_Det AS Login
+                        ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode
+                    WHERE Work.Date = '$Date' AND Work.Shift = '$Shift'
+                        AND Work.Work_Type = 'NoWork' AND Work.Work_Status = '1'
+                        AND Work.Assign_Status = '0' AND Work.Lcode = '$LocationCode'
+                        AND Login.Ccode = '$CompanyCode' AND Login.UserID = '$Login_User'";
+
+                        $this->db->query($NoWork_Sql);
+
+                        $sql4 = "SELECT Work.Type AS Type, Work.*,
+                        CASE
+                            WHEN Work.Assign_Status = '0' THEN 'Unassigned'
+                            WHEN Work.Work_Type = 'NoWork' THEN 'NoWork'
+                            ELSE 'Assigned'
+                        END AS WorkStatus
+                    FROM Web_Employee_Work_Allocation_Mst AS Work
+                    INNER JOIN UserDetails_Det AS Login
+                        ON Login.Lcode = Work.Lcode AND Login.Name = Work.Sub_Department
+                    WHERE Login.UserID = '$Login_User' AND Work.Date = '$Date'
+                        AND Work.Shift = '$Shift' AND Work.Work_Status = '1'";
+
+                        $employee_data = $this->db->query($sql4)->result();
+                        $Un_Assigned_Data = [];
+                        $Assigned_Data = [];
+                        $No_Work_Data = [];
+
+                        foreach ($employee_data as $employee) {
+                            if ($employee->WorkStatus == 'Unassigned') {
+                                $Un_Assigned_Data[] = $employee;
+                            } elseif ($employee->WorkStatus == 'Assigned') {
+                                $Assigned_Data[] = $employee;
+                            } else {
+                                $No_Work_Data[] = $employee;
+                            }
+                        }
+
+                        $NoWork_Employee_Sql1 = "SELECT Work.Type AS Type, Work.*
+                    FROM Web_Employee_Work_Allocation_Mst AS Work
+                    INNER JOIN UserDetails_Det AS Login
+                        ON Login.Lcode = Work.Lcode AND Login.Name = Work.Sub_Department
+                    WHERE Login.UserID = '$Login_User'
+                        AND Work.Date = '$Date' AND Work.Shift = '$Shift'
+                        AND Work.Work_Type = 'NoWork' AND Work.Work_Status = '1'
+                        AND Work.Assign_Status = '0'";
+
+                        $user_dept_sql = "SELECT Name FROM UserDetails_Det
+                    WHERE UserID = '$Login_User' AND Ccode = '$CompanyCode' AND Lcode = '$LocationCode'";
+                        $user_dept = $this->db->query($user_dept_sql)->row();
+                        $deptName = $user_dept ? $user_dept->Name : '';
+
+                        if ($deptName == 'HRD' || $deptName == 'Human Resource Services') {
+                            $NoWorkEmployeeList1 = $this->db->query($NoWork_Employee_Sql1)->result();
+                            $All_Employee_List = array_merge($Assigned_Data, $Un_Assigned_Data);
+                            return $All_Employee_List;
+                        } else {
+                            $NoWorkEmployeeList1 = $this->db->query($NoWork_Employee_Sql1)->result();
+                            $All_Employee_List = array_merge($Assigned_Data, $Un_Assigned_Data, $NoWorkEmployeeList1);
+                            return $All_Employee_List;
+                        }
                     }
                 }
             }
@@ -280,6 +1214,13 @@ class  Work_Model extends CI_Model
             redirect(base_url(), 'refresh');
         }
     }
+
+
+
+
+
+
+
 
 
 
@@ -329,38 +1270,25 @@ class  Work_Model extends CI_Model
     public function Seperated_Sub_Section($CompanyCode, $LocationCode, $Date, $Shift, $Sub_Section, $Login_User)
     {
 
-        // $sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Sub_Section = '$Sub_Section'  AND Work_Status = '1' AND Assign_Status = '1'";
-        // $query = $this->db->query($sql);
-        // $Allocated_List = $query->result();
-
-        // $sql2 = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Sub_Section  = '$Sub_Section' AND Work_Status = '1' AND Assign_Status = '0'";
-        // $query2 = $this->db->query($sql2);
-        // $Un_Allocated_List = $query2->result();
-
-        // $Marge = array_merge($Allocated_List , $Un_Allocated_List);
-
-        // return $Marge;
-
-        $sql4 = "SELECT *,
-                            CASE WHEN Work.Assign_Status = '0' THEN 'Unassigned'
-                                 WHEN Work.Work_Type = 'NoWork' THEN 'NoWork'
-                                 ELSE 'Assigned' END AS WorkStatus
-                    FROM Web_Employee_Work_Allocation_Mst Work
-                    INNER JOIN UserDetails_Det Login ON Login.Lcode = Work.Lcode AND Login.Name = Work.Sub_Department
-                    WHERE Login.UserID = '$Login_User'
-                    AND Work.Date = '$Date'
-                    AND Work.Shift = '$Shift'
-                    AND Work.Sub_Section = '$Sub_Section'
-                    AND Work.Work_Status = '1'";
 
 
+        $sql4 = "SELECT Work.Type AS Type, Work.*,
+                        CASE
+                            WHEN Work.Assign_Status = '0' THEN 'Unassigned'
+                            WHEN Work.Work_Type = 'NoWork' THEN 'NoWork'
+                            ELSE 'Assigned'
+                        END AS WorkStatus
+                    FROM Web_Employee_Work_Allocation_Mst AS Work
+                    INNER JOIN UserDetails_Det AS Login
+                        ON Login.Lcode = Work.Lcode AND Login.Name = Work.Sub_Department
+                    WHERE Login.UserID = '$Login_User' AND Work.Date = '$Date'
+                        AND Work.Shift = '$Shift' AND Work.Work_Status = '1' AND Sub_Section = '$Sub_Section'";
 
         $employee_data = $this->db->query($sql4)->result();
         $Un_Assigned_Data = [];
         $Assigned_Data = [];
         $No_Work_Data = [];
 
-        // Separate the employees into three categories
         foreach ($employee_data as $employee) {
             if ($employee->WorkStatus == 'Unassigned') {
                 $Un_Assigned_Data[] = $employee;
@@ -371,17 +1299,25 @@ class  Work_Model extends CI_Model
             }
         }
 
-        $NoWork_Employee_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Work_Type = 'NoWork' AND Date = '$Date' AND Shift = '$Shift'";
-        $NoWork_Employee_Query = $this->db->query($NoWork_Employee_Sql);
-        $NoWorkEmployeeList = $NoWork_Employee_Query->result();
+        $NoWork_Employee_Sql1 = "SELECT Work.Type AS Type, Work.*
+                    FROM Web_Employee_Work_Allocation_Mst AS Work
+                    INNER JOIN UserDetails_Det AS Login
+                        ON Login.Lcode = Work.Lcode AND Login.Name = Work.Sub_Department
+                    WHERE Login.UserID = '$Login_User'
+                        AND Work.Date = '$Date' AND Work.Shift = '$Shift'
+                        AND Work.Work_Type = 'NoWork' AND Work.Work_Status = '1'
+                        AND Work.Assign_Status = '0' AND Sub_Section = '$Sub_Section'";
 
-        // Combine all employee data
-        $All_Employee_List = array_merge($Assigned_Data, $Un_Assigned_Data, $No_Work_Data, $NoWorkEmployeeList);
+        $user_dept_sql = "SELECT Name FROM UserDetails_Det
+                    WHERE UserID = '$Login_User' AND Ccode = '$CompanyCode' AND Lcode = '$LocationCode'";
+        $user_dept = $this->db->query($user_dept_sql)->row();
+        $deptName = $user_dept ? $user_dept->Name : '';
 
+
+        $NoWorkEmployeeList1 = $this->db->query($NoWork_Employee_Sql1)->result();
+        $All_Employee_List = array_merge($Assigned_Data, $Un_Assigned_Data, $NoWorkEmployeeList1);
         return $All_Employee_List;
     }
-
-
 
 
 
@@ -391,33 +1327,114 @@ class  Work_Model extends CI_Model
     public function Work_Type($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Sub_Department, $Work_Area, $JobCard)
     {
 
+        if ($LocationCode == 'PRECOT - A') {
+
+            $sql = "SELECT Machine_Id, Frame 
+        FROM Web_Machine_Mst 
+        WHERE CCode = '$CompanyCode' 
+        AND LCode = '$LocationCode' 
+        AND WorkArea = '$Work_Area' 
+        AND Department = '$Sub_Department'";
+            $query = $this->db->query($sql);
+            $Machine_Data = $query->result();
+
+            $sql1 = "SELECT Machine_Id, Frame 
+         FROM Web_Employee_Work_Allocation_Mst 
+         WHERE CCode = '$CompanyCode' 
+         AND LCode = '$LocationCode' 
+         AND Date = '$Date' 
+         AND Shift = '$Shift' 
+         AND Sub_Department = '$Sub_Department' 
+         AND WorkArea = '$Work_Area' 
+         AND Work_Status = '1' 
+         AND Assign_Status = '1'
+         AND Closing_Status = '0'";
+            $query1 = $this->db->query($sql1);
+            $Assigned_Machine_Date = $query1->result();
 
 
-        $sql = "SELECT Machine_Id, Frame FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Department = '$Sub_Department'";
-        $query = $this->db->query($sql);
-        $Machine_Data = $query->result();
+            // echo '<pre>'
+            // print_r();
+            // exit;
 
-        $sql1 = "SELECT Machine_Id, Frame FROM Web_Employee_Work_Allocation_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Sub_Department = '$Sub_Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$JobCard' AND Work_Status = '1' AND Assign_Status = '1'";
-        $query1 = $this->db->query($sql1);
-        $Assigned_Machine_Date = $query1->result();
-
-        // print_r($sql1);exit;
-
-        $assigned_machines = [];
-        foreach ($Assigned_Machine_Date as $assigned) {
-            $assigned_machines[] = $assigned->Machine_Id . '-' . $assigned->Frame; // Combine Machine_Id and Frame for easy comparison
-        }
-
-        $Balance_Machines = [];
-        foreach ($Machine_Data as $machine) {
-            $machine_key = $machine->Machine_Id . '-' . $machine->Frame;
-            if (!in_array($machine_key, $assigned_machines)) {
-                $Balance_Machines[] = $machine;
+            $assigned_machines = [];
+            foreach ($Assigned_Machine_Date as $assigned) {
+                $key = trim($assigned->Machine_Id) . '-' . trim($assigned->Frame);
+                $assigned_machines[] = strtolower($key);
             }
+
+            $Balance_Machines = [];
+            foreach ($Machine_Data as $machine) {
+                $machine_key = strtolower(trim($machine->Machine_Id) . '-' . trim($machine->Frame));
+                if (!in_array($machine_key, $assigned_machines)) {
+                    $Balance_Machines[] = $machine;
+                }
+            }
+
+
+            // echo '<pre>';
+            //  print_r($Balance_Machines);exit;
+
+
+            return $Balance_Machines;
+
+        } else if ($LocationCode == 'PRECOT - C' || $LocationCode == 'PRECOT - D') {
+
+
+            $sql = "SELECT Machine_Id, Frame FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Department = '$Sub_Department'";
+            $query = $this->db->query($sql);
+            $Machine_Data = $query->result();
+
+            $sql1 = "SELECT Machine_Id, Frame FROM Web_Employee_Work_Allocation_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Sub_Department = '$Sub_Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$JobCard' AND Work_Status = '1' AND Assign_Status = '1'";
+            $query1 = $this->db->query($sql1);
+            $Assigned_Machine_Date = $query1->result();
+
+            // print_r($sql1);exit;
+
+            $assigned_machines = [];
+            foreach ($Assigned_Machine_Date as $assigned) {
+                $assigned_machines[] = $assigned->Machine_Id . '-' . $assigned->Frame; // Combine Machine_Id and Frame for easy comparison
+            }
+
+            $Balance_Machines = [];
+            foreach ($Machine_Data as $machine) {
+                $machine_key = $machine->Machine_Id . '-' . $machine->Frame;
+                if (!in_array($machine_key, $assigned_machines)) {
+                    $Balance_Machines[] = $machine;
+                }
+            }
+
+
+            return $Balance_Machines;
+        } else if ($LocationCode == 'PRECOT - M') {
+
+
+            $sql = "SELECT Machine_Id, Frame FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Department = '$Sub_Department'";
+            $query = $this->db->query($sql);
+            $Machine_Data = $query->result();
+
+            $sql1 = "SELECT Machine_Id, Frame FROM Web_Employee_Work_Allocation_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Sub_Department = '$Sub_Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$JobCard' AND Work_Status = '1' AND Assign_Status = '1'";
+            $query1 = $this->db->query($sql1);
+            $Assigned_Machine_Date = $query1->result();
+
+            // print_r($sql1);exit;
+
+            $assigned_machines = [];
+            foreach ($Assigned_Machine_Date as $assigned) {
+                $assigned_machines[] = $assigned->Machine_Id . '-' . $assigned->Frame; // Combine Machine_Id and Frame for easy comparison
+            }
+
+            $Balance_Machines = [];
+            foreach ($Machine_Data as $machine) {
+                $machine_key = $machine->Machine_Id . '-' . $machine->Frame;
+                if (!in_array($machine_key, $assigned_machines)) {
+                    $Balance_Machines[] = $machine;
+                }
+            }
+
+
+            return $Balance_Machines;
         }
-
-
-        return $Balance_Machines;
     }
 
 
@@ -468,7 +1485,7 @@ class  Work_Model extends CI_Model
             $query = $this->db->query($sql);
             $Machine_Data = $query->result();
 
-            $query1 = $this->db->query($sql1);
+            $query1 = $this->db->query($sql);
             $Assigned_Machine_Date = $query1->result();
 
             $assigned_machines = [];
@@ -493,32 +1510,122 @@ class  Work_Model extends CI_Model
 
     public function Machine_Ids($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Department, $WorkArea, $JobCardNo, $Frame)
     {
-        try {
-            if (empty($Frame) || !is_array($Frame)) {
-                return 0;
-            }
 
-            $Machine_Data = [];
+        if (!is_array($Frame) || empty($Frame)) {
+            return []; // or throw an error/log it
+        }
+
+
+
+        if ($LocationCode == 'PRECOT - A') {
+
+
+            $All_Balance_Machines = [];
+
 
             foreach ($Frame as $Frames) {
-                $sql = "SELECT Machine_Id, Frame
-                    FROM Web_Machine_Mst
-                    WHERE Lcode = '$LocationCode'
-                    AND Ccode = '$CompanyCode'
-                    AND Department = '$Department'
-                    AND WorkArea = '$WorkArea'
-                    AND Frame = '$Frames'";
 
+                // Get all machines for the current frame
+                $sql = "SELECT Machine_Id, Frame 
+                FROM Web_Machine_Mst 
+                WHERE CCode = '$CompanyCode' 
+                AND LCode = '$LocationCode' 
+                AND WorkArea = '$WorkArea' 
+                AND Frame = '$Frames'
+                AND Department = '$Department'";
                 $query = $this->db->query($sql);
+                $Machine_Data = $query->result();
 
-                if ($query->num_rows() > 0) {
-                    $Machine_Data = array_merge($Machine_Data, $query->result());
+                // Get already assigned machines (common for all frames)
+                $sql1 = "SELECT Machine_Id, Frame 
+                 FROM Web_Employee_Work_Allocation_Mst 
+                 WHERE CCode = '$CompanyCode' 
+                 AND LCode = '$LocationCode' 
+                 AND Date = '$Date' 
+                 AND Shift = '$Shift' 
+                 AND Sub_Department = '$Department' 
+                 AND WorkArea = '$WorkArea' 
+                 AND Frame = '$Frames'
+                 AND Job_Card_No = '$JobCardNo' 
+                 AND Work_Status = '1' 
+                 AND Assign_Status = '1'
+                 AND Closing_Status = '0'";
+                $query1 = $this->db->query($sql1);
+                $Assigned_Machine_Date = $query1->result();
+
+
+                // Normalize assigned machines for comparison
+                $assigned_machines = [];
+                foreach ($Assigned_Machine_Date as $assigned) {
+                    $key = strtolower(trim($assigned->Machine_Id) . '-' . trim($assigned->Frame));
+                    $assigned_machines[] = $key;
+                }
+
+                // Filter out assigned machines
+                foreach ($Machine_Data as $machine) {
+                    $machine_key = strtolower(trim($machine->Machine_Id) . '-' . trim($machine->Frame));
+                    if (!in_array($machine_key, $assigned_machines)) {
+                        $All_Balance_Machines[] = $machine;
+                    }
                 }
             }
 
-            return empty($Machine_Data) ? 0 : $Machine_Data;
-        } catch (Exception $e) {
-            return 0;
+            return $All_Balance_Machines;
+        } else if ($LocationCode == 'PRECOT - C' || $LocationCode == 'PRECOT - D') {
+
+
+            $All_Balance_Machines = []; // collect all balance machines from all frames
+
+            foreach ($Frame as $Frames) {
+                // Get all machines for the current frame
+                $sql = "SELECT Machine_Id, Frame 
+                FROM Web_Machine_Mst 
+                WHERE CCode = '$CompanyCode' 
+                AND LCode = '$LocationCode' 
+                AND WorkArea = '$WorkArea' 
+                AND Frame = '$Frames'
+                AND Department = '$Department'";
+                $query = $this->db->query($sql);
+                $Machine_Data = $query->result();
+
+                // Get already assigned machines (common for all frames)
+                $sql1 = "SELECT Machine_Id, Frame 
+                 FROM Web_Employee_Work_Allocation_Mst 
+                 WHERE CCode = '$CompanyCode' 
+                 AND LCode = '$LocationCode' 
+                 AND Date = '$Date' 
+                 AND Shift = '$Shift' 
+                 AND Sub_Department = '$Department' 
+                 AND WorkArea = '$WorkArea' 
+                 AND Frame = '$Frames'
+                 AND Job_Card_No = '$JobCardNo' 
+                 AND Work_Status = '1' 
+                 AND Assign_Status = '1'
+                 AND Closing_Status = '0'";
+                $query1 = $this->db->query($sql1);
+                $Assigned_Machine_Date = $query1->result();
+
+                // echo '<pre>';
+                // print_r($sql1);
+                // exit;
+
+                // Normalize assigned machines for comparison
+                $assigned_machines = [];
+                foreach ($Assigned_Machine_Date as $assigned) {
+                    $key = strtolower(trim($assigned->Machine_Id) . '-' . trim($assigned->Frame));
+                    $assigned_machines[] = $key;
+                }
+
+                // Filter out assigned machines
+                foreach ($Machine_Data as $machine) {
+                    $machine_key = strtolower(trim($machine->Machine_Id) . '-' . trim($machine->Frame));
+                    if (!in_array($machine_key, $assigned_machines)) {
+                        $All_Balance_Machines[] = $machine;
+                    }
+                }
+            }
+
+            return $All_Balance_Machines;
         }
     }
 
@@ -552,526 +1659,105 @@ class  Work_Model extends CI_Model
 
 
 
-    public function Assign($input_data, $CompanyCode, $LocationCode)
+    public function Assign($input_data, $CompanyCode, $LocationCode,$Login_User)
     {
         $Session = $this->session->userdata('sess_array');
         if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
 
-            $success = true;
-            $allocation_details = [];
 
-            foreach ($input_data['Allocations'] as $row) {
+            if ($LocationCode == 'PRECOT - A') {
 
-                $Sub_Department = $row['Department'];
-                $Shift = $row['Shift'];
-                $Date = $row['Date'];
-                $Work_Area = $row['Work_Area'];
-                $Employee_Id = $row['EmployeeId'];
-                $Frames = $row['Frames'];
-                $Machine_Id = $row['Machine_Id'];
-                $Job_Card_No = $row['JobCardNo'];
-                $Description = $row['Description'];
-                $Allocation_Type = $row['Allocation_Type'];
-                $Allocation_Screen_Type = $row['Allocation_Screen_Type'];
+                $success = true;
+                $allocation_details = [];
 
+                foreach ($input_data['Allocations'] as $row) {
 
-                $sql_Job = "SELECT * FROM Web_JobCard_Mst WHERE Lcode = '$LocationCode' AND Ccode = '$CompanyCode' AND Department = '$Sub_Department'  AND WorkArea = '$Work_Area'";
-                $Query_Job = $this->db->query($sql_Job);
-                $Result_Job = $Query_Job->result();
+                    $Sub_Department = $row['Department'];
+                    $Shift = $row['Shift'];
+                    $Date = $row['Date'];
+                    $Work_Area = $row['Work_Area'];
+                    $Employee_Id = $row['EmployeeId'];
+                    $Frames = $row['Frames'];
+                    $Machine_Id = $row['Machine_Id'];
+                    $Job_Card_No = $row['JobCardNo'];
+                    $Description = $row['Description'];
+                    $Allocation_Type = $row['Allocation_Type'];
+                    $Allocation_Screen_Type = $row['Allocation_Screen_Type'];
 
 
-                $Job_Card_No =  $Result_Job[0]->JobCard_No;
+                    $sql_Job = "SELECT * FROM Web_JobCard_Mst WHERE Lcode = '$LocationCode' AND Ccode = '$CompanyCode' AND Department = '$Sub_Department'  AND WorkArea = '$Work_Area'";
+                    $Query_Job = $this->db->query($sql_Job);
+                    $Result_Job = $Query_Job->result();
 
 
-                $Employee_Data = $this->db->query("SELECT FirstName, ExistingCode, wages,DeptName,DeptGrp,SubSection_Name FROM Employee_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ExistingCode = '$Employee_Id'")->result();
-                if (empty($Employee_Data)) {
-                    $success = false;
-                    $allocation_details[] = ['status' => 'error', 'message' => "Employee $Employee_Id not found"];
-                }
+                    $Job_Card_No =  $Result_Job[0]->JobCard_No ? : '';
 
-                $Employee_Name = $Employee_Data[0]->FirstName;
-                $ExistingCode = $Employee_Data[0]->ExistingCode;
-                $Wages = $Employee_Data[0]->wages;
-                $Department = $Employee_Data[0]->DeptGrp;
-                $Sub_Section = $Employee_Data[0]->SubSection_Name;
-
-                if ($Machine_Id == []) {
-
-                    foreach ($Frames as $Frame_Data) {
-
-                        if ($Frame_Data == 'NoWork') {
-
-                            $Work_Allocation = [
-                                'Ccode' => $CompanyCode,
-                                'Lcode' => $LocationCode,
-                                'Wages' => $Wages,
-                                'Machine_Id' => '',
-                                'Machine_Name' => '-',
-                                'Machine_Model' => '-',
-                                'FirstName' => $Employee_Name,
-                                'EmpNo' => $Employee_Id,
-                                'ExistingCode' => $ExistingCode,
-                                'Shift' => $Shift,
-                                'Date' => $Date,
-                                'Job_Card_No' => $Job_Card_No,
-                                'Work_Type' => 'NoWork',
-                                'Status_Updated' => 'NoWork',
-                                'Department' => $Department,
-                                'Sub_Department' => $Sub_Department,
-                                'Sub_Section' => $Sub_Section,
-                                'Previous_Shift' => '-',
-                                'Screen_Type' => $Allocation_Screen_Type,
-                                'OT_Confirmation' => '-',
-                                'WorkArea' => $Work_Area,
-                                'Frame' => $Frame_Data,
-                                'FrameType' => '',
-                                'Description' => $Description,
-                                'Type' => $Allocation_Type,
-                                'Work_Status' => '1',
-                                'Assign_Status' => '0',
-                                'Closing_Status' => '0',
-                                'IsWork' => '1',
-                                'Created_By' => $Session['UserName'],
-                                'Created_Time' => date('Y-m-d H:i:s'),
-                                'Updated_By' => '-',
-                                'Updated_Time' => '-',
-
-                            ];
-
-                            $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
-
-                            if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
-                                $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
-                            } else {
-                                $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
-                                $success = false;
-                            }
-                        } elseif ($Frame_Data == 'Others') {
-
-                            $Work_Allocation = [
-                                'Ccode' => $CompanyCode,
-                                'Lcode' => $LocationCode,
-                                'Wages' => $Wages,
-                                'Machine_Id' => '',
-                                'Machine_Name' => '-',
-                                'Machine_Model' => '-',
-                                'FirstName' => $Employee_Name,
-                                'EmpNo' => $Employee_Id,
-                                'ExistingCode' => $ExistingCode,
-                                'Shift' => $Shift,
-                                'Date' => $Date,
-                                'Job_Card_No' => $Job_Card_No,
-                                'Work_Type' => 'Others',
-                                'Status_Updated' => 'Others',
-                                'Department' => $Department,
-                                'Sub_Department' => $Sub_Department,
-                                'Sub_Section' => $Sub_Section,
-                                'Screen_Type' => $Allocation_Screen_Type,
-                                'Previous_Shift' => '-',
-                                'OT_Confirmation' => '-',
-                                'WorkArea' => $Work_Area,
-                                'Frame' => $Frame_Data,
-                                'FrameType' => '',
-                                'Description' => $Description,
-                                'Type' => $Allocation_Type,
-                                'Work_Status' => '1',
-                                'Assign_Status' => '1',
-                                'Closing_Status' => '0',
-                                'IsWork' => '1',
-                                'Created_By' => $Session['UserName'],
-                                'Created_Time' => date('Y-m-d H:i:s'),
-                                'Updated_By' => '-',
-                                'Updated_Time' => '-',
-                            ];
-
-                            $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
-
-                            // echo '<pre>';
-                            // print_r($Work_Allocation);
-                            // exit;
-
-                            if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
-                                $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
-                            } else {
-                                $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
-                                $success = false;
-                            }
-                        } elseif ($Frame_Data == 'Multiple Trainee') {
-
-                            $Work_Allocation = [
-                                'Ccode' => $CompanyCode,
-                                'Lcode' => $LocationCode,
-                                'Wages' => $Wages,
-                                'Machine_Id' => '',
-                                'Machine_Name' => '-',
-                                'Machine_Model' => '-',
-                                'FirstName' => $Employee_Name,
-                                'EmpNo' => $Employee_Id,
-                                'ExistingCode' => $ExistingCode,
-                                'Shift' => $Shift,
-                                'Date' => $Date,
-                                'Job_Card_No' => $Job_Card_No,
-                                'Work_Type' => 'Multiple Trainee',
-                                'Status_Updated' => 'Multiple Trainee',
-                                'Department' => $Department,
-                                'Sub_Department' => $Sub_Department,
-                                'Sub_Section' => $Sub_Section,
-                                'Screen_Type' => $Allocation_Screen_Type,
-                                'Previous_Shift' => '-',
-                                'OT_Confirmation' => '-',
-                                'WorkArea' => $Work_Area,
-                                'Frame' => $Frame_Data,
-                                'FrameType' => '',
-                                'Description' => $Description,
-                                'Type' => $Allocation_Type,
-                                'Work_Status' => '1',
-                                'Assign_Status' => '1',
-                                'Closing_Status' => '0',
-                                'IsWork' => '1',
-                                'Created_By' => $Session['UserName'],
-                                'Created_Time' => date('Y-m-d H:i:s'),
-                                'Updated_By' => '-',
-                                'Updated_Time' => '-',
-                            ];
-
-                            $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
-
-                            if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
-                                $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
-                            } else {
-                                $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
-                                $success = false;
-                            }
-                        } elseif ($Frame_Data == 'Trainee') {
-
-                            $Work_Allocation = [
-                                'Ccode' => $CompanyCode,
-                                'Lcode' => $LocationCode,
-                                'Wages' => $Wages,
-                                'Machine_Id' => '',
-                                'Machine_Name' => '-',
-                                'Machine_Model' => '-',
-                                'FirstName' => $Employee_Name,
-                                'EmpNo' => $Employee_Id,
-                                'ExistingCode' => $ExistingCode,
-                                'Shift' => $Shift,
-                                'Date' => $Date,
-                                'Job_Card_No' => $Job_Card_No,
-                                'Work_Type' => 'Trainee',
-                                'Status_Updated' => 'Trainee',
-                                'Department' => $Department,
-                                'Sub_Department' => $Sub_Department,
-                                'Sub_Section' => $Sub_Section,
-                                'Screen_Type' => $Allocation_Screen_Type,
-                                'Previous_Shift' => '-',
-                                'OT_Confirmation' => '-',
-                                'WorkArea' => $Work_Area,
-                                'Frame' => $Frame_Data,
-                                'FrameType' => '',
-                                'Description' => $Description,
-                                'Type' => $Allocation_Type,
-                                'Work_Status' => '1',
-                                'Assign_Status' => '1',
-                                'Closing_Status' => '0',
-                                'IsWork' => '1',
-                                'Created_By' => $Session['UserName'],
-                                'Created_Time' => date('Y-m-d H:i:s'),
-                                'Updated_By' => '-',
-                                'Updated_Time' => '-',
-                            ];
-
-                            $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
-
-                            if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
-                                $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
-                            } else {
-                                $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
-                                $success = false;
-                            }
+                    function getPreviousShift($currentShift, $shiftMaster)
+                    {
+                        $shiftKeys = array_keys($shiftMaster);
+                        if (in_array($currentShift, $shiftKeys)) {
+                            $currentIndex = array_search($currentShift, $shiftKeys);
+                            $previousIndex = ($currentIndex - 1) < 0 ? count($shiftKeys) - 1 : $currentIndex - 1;
+                            return $shiftKeys[$previousIndex];
                         }
+                        return null;
                     }
-                } else {
-
-                    if (
-                        $Sub_Department === 'Spinning-Prod' || $Sub_Department === 'Finishing-Prod' || $Sub_Department == 'SPINNING-PROD' || $Sub_Department == 'FINISHING-PROD' ||  $Sub_Department === 'FINISHING - PM1' ||  $Sub_Department === 'FINISHING - PM2' ||  $Sub_Department === 'SPINNING - PM1' ||  $Sub_Department === 'SPINNING - PM2'
-                        ||  $Sub_Department === 'Finishing - PM1' ||  $Sub_Department === 'Finishing - PM2'  ||  $Sub_Department === 'Spinning - PM1' ||  $Sub_Department === 'Spinning - PM2' || $Sub_Department === 'Preparatory-Prod' || $Sub_Department === 'PREPARATORY-PROD' || $Sub_Department == 'TFO'
-                    ) {
-
-                        foreach ($Machine_Id as $index => $Machine_datas) {
 
 
-                            // exit;
+                    $Shift_Master = [
+
+                        'SHIFT1' => 'SHIFT1',
+                        'SHIFT2' => 'SHIFT2',
+                        'SHIFT3' => 'SHIFT3',
+
+                    ];
+
+                    $Current_Shift = $Shift;
+
+                    $Previous_Shift = getPreviousShift($Current_Shift, $Shift_Master);
 
 
-                            // for example  $Frame_Data = S1 again next time   $Frame_Data  this  variable  data set for $Duplicated variable
+                    
 
-                            $Duplicate = $Frames[$index] ?? null; // Get the frame value for the current index, or null if not set
-                            $Frame_Data = $Frames[0] ?: $Duplicate; // Set $Frame_Data to "S1" for all machines
-
-
-
-                            if ($Frame_Data == 'Machine Wise') {
-
-                                $Frame_Data = 'Machine Wise';
-
-
-                                $machine_data = $this->db->query("SELECT Machine_Name, Machine_Model FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Machine_Id = '$Machine_datas'")->result();
-                                $Machine_Name = $machine_data[0]->Machine_Name;
-                                $Machine_Model = $machine_data[0]->Machine_Model;
-
-
-                                $Work_Allocation = [
-                                    'Ccode' => $CompanyCode,
-                                    'Lcode' => $LocationCode,
-                                    'Wages' => $Wages,
-                                    'Machine_Id' => $Machine_datas,
-                                    'Machine_Name' => $Machine_Name,
-                                    'Machine_Model' => $Machine_Model,
-                                    'FirstName' => $Employee_Name,
-                                    'EmpNo' => $Employee_Id,
-                                    'ExistingCode' => $ExistingCode,
-                                    'Shift' => $Shift,
-                                    'Date' => $Date,
-                                    'Job_Card_No' => $Job_Card_No,
-                                    'Work_Type' => 'Machine',
-                                    'Status_Updated' => 'Machine',
-                                    'Department' => $Department,
-                                    'Sub_Department' => $Sub_Department,
-                                    'Sub_Section' => $Sub_Section,
-                                    'Previous_Shift' => '-',
-                                    'Screen_Type' => $Allocation_Screen_Type,
-                                    'OT_Confirmation' => '-',
-                                    'WorkArea' => $Work_Area,
-                                    'Frame' => $Frame_Data,
-                                    'FrameType' => '',
-                                    'Description' => $Description,
-                                    'Type' => $Allocation_Type,
-                                    'Work_Status' => '1',
-                                    'Assign_Status' => '1',
-                                    'Closing_Status' => '0',
-                                    'IsWork' => '0',
-                                    'Created_By' => $Session['UserName'],
-                                    'Created_Time' => date('Y-m-d H:i:s'),
-                                    'Updated_By' => '-',
-                                    'Updated_Time' => '-',
-                                ];
-
-                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
-
-                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
-                                    $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
-                                } else {
-                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
-                                    $success = false;
-                                }
-                            } else {
-
-
-                                $Duplicate = $Frames[$index] ?? null; // Get the frame value for the current index, or null if not set
-                                $Frame_Data = $Frames[0] ?: $Duplicate; // Set $Frame_Data to "S1" for all machines
-
-                                $machine_data = $this->db->query("SELECT Machine_Name, Machine_Model FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Machine_Id = '$Machine_datas'")->result();
-                                $Machine_Name = $machine_data[0]->Machine_Name;
-                                $Machine_Model = $machine_data[0]->Machine_Model;
-
-
-                                $Work_Allocation = [
-                                    'Ccode' => $CompanyCode,
-                                    'Lcode' => $LocationCode,
-                                    'Wages' => $Wages,
-                                    'Machine_Id' => $Machine_datas,
-                                    'Machine_Name' => $Machine_Name,
-                                    'Machine_Model' => $Machine_Model,
-                                    'FirstName' => $Employee_Name,
-                                    'EmpNo' => $Employee_Id,
-                                    'ExistingCode' => $ExistingCode,
-                                    'Shift' => $Shift,
-                                    'Date' => $Date,
-                                    'Job_Card_No' => $Job_Card_No,
-                                    'Work_Type' => 'Machine',
-                                    'Status_Updated' => 'Machine',
-                                    'Department' => $Department,
-                                    'Sub_Department' => $Sub_Department,
-                                    'Sub_Section' => $Sub_Section,
-                                    'Previous_Shift' => '-',
-                                    'Screen_Type' => $Allocation_Screen_Type,
-                                    'OT_Confirmation' => '-',
-                                    'WorkArea' => $Work_Area,
-                                    'Frame' => $Frame_Data,
-                                    'FrameType' => '',
-                                    'Description' => $Description,
-                                    'Type' => $Allocation_Type,
-                                    'Work_Status' => '1',
-                                    'Assign_Status' => '1',
-                                    'Closing_Status' => '0',
-                                    'IsWork' => '0',
-                                    'Created_By' => $Session['UserName'],
-                                    'Created_Time' => date('Y-m-d H:i:s'),
-                                    'Updated_By' => '-',
-                                    'Updated_Time' => '-',
-                                ];
-
-                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
-
-                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
-                                    $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
-                                } else {
-                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
-                                    $success = false;
-                                }
-                            }
-                        }
-                    } else {
-
-
-
-                        foreach ($Machine_Id as $index => $Machine_datas) {
-
-                            $Frame_Data = '';
-
-
-                            $machine_data = $this->db->query("SELECT Machine_Name, Machine_Model FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Frame = '$Frame_Data'")->result();
-                            $Machine_Name = $machine_data[0]->Machine_Name ?: '-';
-                            $Machine_Model = $machine_data[0]->Machine_Model ?: '-';
-
-
-
-                            $existing_combination = $this->db->query("SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Shift = '$Shift' AND Date = '$Date' AND EmpNo = '$Employee_Id' AND Machine_Id = '$Machine_datas' AND Frame = '$Frame_Data' AND Assign_Status = '1'");
-
-                            if ($existing_combination->num_rows() > 0) {
-                                $allocation_details[] = ['status' => 'skip', 'message' => 'Duplicate allocation found, skipping insertion'];
-                                continue;
-                            }
-
-                            $Work_Allocation = [
-                                'Ccode' => $CompanyCode,
-                                'Lcode' => $LocationCode,
-                                'Wages' => $Wages,
-                                'Machine_Id' => $Machine_datas,
-                                'Machine_Name' => $Machine_Name,
-                                'Machine_Model' => $Machine_Model,
-                                'FirstName' => $Employee_Name,
-                                'EmpNo' => $Employee_Id,
-                                'ExistingCode' => $ExistingCode,
-                                'Shift' => $Shift,
-                                'Date' => $Date,
-                                'Job_Card_No' => $Job_Card_No,
-                                'Work_Type' => 'Machine',
-                                'Status_Updated' => 'Machine',
-                                'Department' => $Department,
-                                'Sub_Department' => $Sub_Department,
-                                'Sub_Section' => $Sub_Section,
-                                'Screen_Type' => $Allocation_Screen_Type,
-                                'Previous_Shift' => '-',
-                                'OT_Confirmation' => '-',
-                                'WorkArea' => $Work_Area,
-                                'Frame' => $Frame_Data,
-                                'FrameType' => '',
-                                'Description' => $Description,
-                                'Type' => $Allocation_Type,
-                                'Work_Status' => '1',
-                                'Assign_Status' => '1',
-                                'Closing_Status' => '0',
-                                'IsWork' => '0',
-                                'Created_By' => $Session['UserName'],
-                                'Created_Time' => date('Y-m-d H:i:s'),
-                                'Updated_By' => '-',
-                                'Updated_Time' => '-',
-                            ];
-
-
-
-                            $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
-
-                            if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
-                                $allocation_details[] = ['status' => 'success', 'message' => 'Machine allocation assigned successfully'];
-                            } else {
-                                $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning machine allocation'];
-                                $success = false;
-                            }
-                        }
+                    // Check Previous Allocation 
+                   if ($Shift == 'SHIFT1') {
+                        $Previous_Date = date('Y-m-d', strtotime($Date . ' -1 days'));
+                        $Sql_OT_PreviousDay = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst Work
+                            INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                            WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                            AND Work.Date = '$Previous_Date' AND Work.EmpNo = '$Employee_Id'
+                            AND Work.Shift = 'SHIFT3' AND Work.Work_Status = '1'
+                            AND Login.UserID = '$Login_User'";
+                        $this->db->query($Sql_OT_PreviousDay);
                     }
-                }
-            }
-        } else {
-            redirect(base_url(), 'refresh');
-        }
-    }
+
+                    $Sql_OT = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst Work
+                        INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                        WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                        AND Work.Date = '$Date' AND Work.EmpNo = '$Employee_Id'
+                        AND Work.Shift = '$Previous_Shift' AND Work.Work_Status = '1'
+                        AND Login.UserID = '$Login_User'";
+
+                    $Query_OT = $this->db->query($Sql_OT);
 
 
+                    $Employee_Data = $this->db->query("SELECT FirstName, ExistingCode, wages,DeptName,DeptGrp,SubSection_Name FROM Employee_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ExistingCode = '$Employee_Id'")->result();
+                    if (empty($Employee_Data)) {
+                        $success = false;
+                        $allocation_details[] = ['status' => 'error', 'message' => "Employee $Employee_Id not found"];
+                    }
 
-    private function delete_existing_allocation($Shift, $Date, $Employee_Id)
-    {
-        $sql_check_existing = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Shift = '$Shift' AND Date = '$Date' AND EmpNo = '$Employee_Id' AND Work_Status = '1' ";
-        $Query = $this->db->query($sql_check_existing);
+                    $Employee_Name = $Employee_Data[0]->FirstName;
+                    $ExistingCode = $Employee_Data[0]->ExistingCode;
+                    $Wages = $Employee_Data[0]->wages;
+                    $Department = $Employee_Data[0]->DeptGrp;
+                    $Sub_Section = $Employee_Data[0]->SubSection_Name;
 
-        // print_r($sql_check_existing);exit;
+                    if ($Machine_Id == []) {
 
-        if ($Query->num_rows() > 0) {
-            // Delete existing allocation
-            $sql_delete = "DELETE FROM Web_Employee_Work_Allocation_Mst WHERE Shift = '$Shift' AND Date = '$Date' AND EmpNo = '$Employee_Id' AND Work_Status = '1'";
-            $this->db->query($sql_delete);
-        }
-    }
+                        foreach ($Frames as $Frame_Data) {
 
-    public function Edit($input_data, $CompanyCode, $LocationCode)
-    {
-        $Session = $this->session->userdata('sess_array');
-        if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
-
-            $success = true;
-            $allocation_details = [];
-
-            foreach ($input_data['Allocations'] as $row) {
-
-                $Sub_Department = $row['Department'];
-                $Shift = $row['Shift'];
-                $Date = $row['Date'];
-                $Work_Area = $row['Work_Area'];
-                $Employee_Id = $row['EmployeeId'];
-                $Frames = $row['Frames'];
-                $Machine_Id = $row['Machine_Id'];
-                // $Job_Card_No = $row['JobCardNo'];
-                $Description = $row['Description'];
-                $Allocation_Type = $row['Allocation_Type'];
-                $Allocation_Screen_Type = $row['Allocation_Screen_Type'];
-
-                $sql_Job = "SELECT * FROM Web_JobCard_Mst WHERE Lcode = '$LocationCode' AND Ccode = '$CompanyCode' AND Department = '$Sub_Department'  AND WorkArea = '$Work_Area'";
-                $Query_Job = $this->db->query($sql_Job);
-                $Result_Job = $Query_Job->result();
-
-                $Job_Card_No =  $Result_Job[0]->JobCard_No;
-
-                $Employee_Data = $this->db->query("SELECT FirstName, ExistingCode, wages, DeptName, DeptGrp,SubSection_Name FROM Employee_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ExistingCode = '$Employee_Id'")->result();
-                if (empty($Employee_Data)) {
-                    $success = false;
-                    $allocation_details[] = ['status' => 'error', 'message' => "Employee $Employee_Id not found"];
-                }
-
-                $Employee_Name = $Employee_Data[0]->FirstName;
-                $ExistingCode = $Employee_Data[0]->ExistingCode;
-                $Wages = $Employee_Data[0]->wages;
-                $Department = $Employee_Data[0]->DeptGrp;
-                $Sub_Section = $Employee_Data[0]->SubSection_Name;
-
-
-                if ($Machine_Id == [''] || $Machine_Id == []) {
-
-                    foreach ($Frames as $Frame_Data) {
-
-                        if ($Frame_Data == 'NoWork') {
-
-                            $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
-                            $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
-                            $Work_Duplicated = $Work_Duplicated_Query->num_rows();
-
-                            if ($Work_Duplicated > 0) {
-
-                                $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
-                            } else {
-
-                                $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
-                                $Updated_Query = $this->db->query($Update);
+                            if ($Frame_Data == 'NoWork') {
 
                                 $Work_Allocation = [
                                     'Ccode' => $CompanyCode,
@@ -1088,12 +1774,10 @@ class  Work_Model extends CI_Model
                                     'Job_Card_No' => $Job_Card_No,
                                     'Work_Type' => 'NoWork',
                                     'Status_Updated' => 'NoWork',
-
                                     'Department' => $Department,
                                     'Sub_Department' => $Sub_Department,
                                     'Sub_Section' => $Sub_Section,
                                     'Screen_Type' => $Allocation_Screen_Type,
-                                    'Previous_Shift' => '-',
                                     'OT_Confirmation' => '-',
                                     'WorkArea' => $Work_Area,
                                     'Frame' => $Frame_Data,
@@ -1108,7 +1792,157 @@ class  Work_Model extends CI_Model
                                     'Created_Time' => date('Y-m-d H:i:s'),
                                     'Updated_By' => '-',
                                     'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+
                                 ];
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                    $success = false;
+                                }
+                            } elseif ($Frame_Data == 'Others') {
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => '',
+                                    'Machine_Name' => '-',
+                                    'Machine_Model' => '-',
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Others',
+                                    'Status_Updated' => 'Others',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '1',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                // echo '<pre>';
+                                // print_r($Work_Allocation);
+                                // exit;
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                    $success = false;
+                                }
+                            } elseif ($Frame_Data == 'Multiple Trainee') {
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => '',
+                                    'Machine_Name' => '-',
+                                    'Machine_Model' => '-',
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Multiple Trainee',
+                                    'Status_Updated' => 'Multiple Trainee',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '1',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                    $success = false;
+                                }
+                            } elseif ($Frame_Data == 'Trainee') {
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => '',
+                                    'Machine_Name' => '-',
+                                    'Machine_Model' => '-',
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Trainee',
+                                    'Status_Updated' => 'Trainee',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '1',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
 
                                 if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
                                     $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
@@ -1117,19 +1951,1120 @@ class  Work_Model extends CI_Model
                                     $success = false;
                                 }
                             }
-                        } elseif ($Frame_Data == 'Others') {
+                        }
+                    } else {
 
-                            $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
-                            $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
-                            $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+                        if ($Sub_Department === 'Spinning-Prod' || $Sub_Department === 'Finishing-Prod' ||  $Sub_Department === 'Preparatory-Prod' || $Sub_Department == 'SPINNING-PROD' || $Sub_Department == 'FINISHING-PROD'  || $Sub_Department === 'PREPARATORY-PROD') {
 
-                            if ($Work_Duplicated > 0) {
+                            foreach ($Machine_Id as $index => $Machine_datas) {
 
-                                $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
-                            } else {
+                                $Duplicate = $Frames[$index] ?? null;
+                                $Frame_Data = $Frames[0] ?: $Duplicate;
 
-                                $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
-                                $Updated_Query = $this->db->query($Update);
+
+
+                                $machine_data = $this->db->query("SELECT Machine_Name, Machine_Model 
+                                                                    FROM Web_Machine_Mst 
+                                                                    WHERE CCode = '$CompanyCode' 
+                                                                    AND LCode = '$LocationCode' 
+                                                                    AND WorkArea = '$Work_Area' 
+                                                                    AND Machine_Id = '$Machine_datas'")->result();
+
+                                $Machine_Name = $machine_data[0]->Machine_Name ?? '-';
+                                $Machine_Model = $machine_data[0]->Machine_Model ?? '-';
+
+                                $Work_Allocation = [
+                                    'Ccode'            => $CompanyCode,
+                                    'Lcode'            => $LocationCode,
+                                    'Wages'            => $Wages,
+                                    'Machine_Id'       => $Machine_datas,
+                                    'Machine_Name'     => $Machine_Name,
+                                    'Machine_Model'    => $Machine_Model,
+                                    'FirstName'        => $Employee_Name,
+                                    'EmpNo'            => $Employee_Id,
+                                    'ExistingCode'     => $ExistingCode,
+                                    'Shift'            => $Shift,
+                                    'Date'             => $Date,
+                                    'Job_Card_No'      => $Job_Card_No,
+                                    'Work_Type'        => 'Machine',
+                                    'Status_Updated'   => 'Machine',
+                                    'Department'       => $Department,
+                                    'Sub_Department'   => $Sub_Department,
+                                    'Sub_Section'      => $Sub_Section,
+                                    'Screen_Type'      => $Allocation_Screen_Type,
+                                    'OT_Confirmation'  => '-',
+                                    'WorkArea'         => $Work_Area,
+                                    'Frame'            => $Frame_Data,     // M1, M2, ...
+                                    'FrameType'        => '',
+                                    'Description'      => $Description,
+                                    'Type'             => $Allocation_Type,
+                                    'Work_Status'      => '1',
+                                    'Assign_Status'    => '1',
+                                    'Closing_Status'   => '0',
+                                    'IsWork'           => '0',
+                                    'Created_By'       => $Session['UserName'],
+                                    'Created_Time'     => date('Y-m-d H:i:s'),
+                                    'Updated_By'       => '-',
+                                    'Updated_Time'     => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                // Optional: Insert or show for testing
+
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'Work allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning work allocation'];
+                                    $success = false;
+                                }
+                            }
+                        } else {
+
+
+
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                $Frame_Data = '';
+
+
+                                $machine_data = $this->db->query("SELECT Machine_Name, Machine_Model FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Frame = '$Frame_Data'")->result();
+                                $Machine_Name = $machine_data[0]->Machine_Name ?: '-';
+                                $Machine_Model = $machine_data[0]->Machine_Model ?: '-';
+
+
+
+                                $existing_combination = $this->db->query("SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Shift = '$Shift' AND Date = '$Date' AND EmpNo = '$Employee_Id' AND Machine_Id = '$Machine_datas' AND Frame = '$Frame_Data' AND Assign_Status = '1'");
+
+                                if ($existing_combination->num_rows() > 0) {
+                                    $allocation_details[] = ['status' => 'skip', 'message' => 'Duplicate allocation found, skipping insertion'];
+                                    continue;
+                                }
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => $Machine_datas,
+                                    'Machine_Name' => $Machine_Name,
+                                    'Machine_Model' => $Machine_Model,
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Machine',
+                                    'Status_Updated' => 'Machine',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '0',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'Machine allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning machine allocation'];
+                                    $success = false;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if ($LocationCode == 'PRECOT - C') {
+
+
+                $success = true;
+                $allocation_details = [];
+
+                foreach ($input_data['Allocations'] as $row) {
+
+                    $Sub_Department = $row['Department'];
+                    $Shift = $row['Shift'];
+                    $Date = $row['Date'];
+                    $Work_Area = $row['Work_Area'];
+                    $Employee_Id = $row['EmployeeId'];
+                    $Frames = $row['Frames'];
+                    $Machine_Id = $row['Machine_Id'];
+                    $Job_Card_No = $row['JobCardNo'];
+                    $Description = $row['Description'];
+                    $Allocation_Type = $row['Allocation_Type'];
+                    $Allocation_Screen_Type = $row['Allocation_Screen_Type'];
+
+                                        $sql_Job = "SELECT * FROM Web_JobCard_Mst WHERE Lcode = '$LocationCode' AND Ccode = '$CompanyCode' AND Department = '$Sub_Department'  AND WorkArea = '$Work_Area'";
+                    $Query_Job = $this->db->query($sql_Job);
+                    $Result_Job = $Query_Job->result();
+
+
+                    $Job_Card_No =  $Result_Job[0]->JobCard_No ? : '';
+
+
+                    function getPreviousShift($currentShift, $shiftMaster)
+                    {
+                        $shiftKeys = array_keys($shiftMaster);
+                        if (in_array($currentShift, $shiftKeys)) {
+                            $currentIndex = array_search($currentShift, $shiftKeys);
+                            $previousIndex = ($currentIndex - 1) < 0 ? count($shiftKeys) - 1 : $currentIndex - 1;
+                            return $shiftKeys[$previousIndex];
+                        }
+                        return null;
+                    }
+
+
+                    $Shift_Master = [
+
+                        'SHIFT1' => 'SHIFT1',
+                        'SHIFT2' => 'SHIFT2',
+                        'SHIFT3' => 'SHIFT3',
+
+                    ];
+
+                    $Current_Shift = $Shift;
+
+                    $Previous_Shift = getPreviousShift($Current_Shift, $Shift_Master);
+
+
+                    
+
+                    // Check Previous Allocation 
+                   if ($Shift == 'SHIFT1') {
+                        $Previous_Date = date('Y-m-d', strtotime($Date . ' -1 days'));
+                        $Sql_OT_PreviousDay = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst Work
+                            INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                            WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                            AND Work.Date = '$Previous_Date' AND Work.EmpNo = '$Employee_Id'
+                            AND Work.Shift = 'SHIFT3' AND Work.Work_Status = '1'
+                            AND Login.UserID = '$Login_User'";
+                        $this->db->query($Sql_OT_PreviousDay);
+                    }
+
+                    $Sql_OT = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst Work
+                        INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                        WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                        AND Work.Date = '$Date' AND Work.EmpNo = '$Employee_Id'
+                        AND Work.Shift = '$Previous_Shift' AND Work.Work_Status = '1'
+                        AND Login.UserID = '$Login_User'";
+
+                    $Query_OT = $this->db->query($Sql_OT);
+
+
+                    $sql_Job = "SELECT * FROM Web_JobCard_Mst WHERE Lcode = '$LocationCode' AND Ccode = '$CompanyCode' AND Department = '$Sub_Department'  AND WorkArea = '$Work_Area'";
+                    $Query_Job = $this->db->query($sql_Job);
+                    $Result_Job = $Query_Job->result();
+
+
+                    // $Job_Card_No =  $Result_Job[0]->JobCard_No;
+
+
+                    $Employee_Data = $this->db->query("SELECT FirstName, ExistingCode, wages,DeptName,DeptGrp,SubSection_Name FROM Employee_Mst WHERE CompCode = '$CompanyCode' AND ExistingCode = '$Employee_Id'")->result();
+                    if (empty($Employee_Data)) {
+                        $success = false;
+                        $allocation_details[] = ['status' => 'error', 'message' => "Employee $Employee_Id not found"];
+                    }
+
+                    $Employee_Name = $Employee_Data[0]->FirstName;
+                    $ExistingCode = $Employee_Data[0]->ExistingCode;
+                    $Wages = $Employee_Data[0]->wages;
+                    $Department = $Employee_Data[0]->DeptGrp;
+                    $Sub_Section = $Employee_Data[0]->SubSection_Name;
+
+                    if ($Machine_Id == []) {
+
+                        foreach ($Frames as $Frame_Data) {
+
+                            if ($Frame_Data == 'NoWork') {
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => '',
+                                    'Machine_Name' => '-',
+                                    'Machine_Model' => '-',
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'NoWork',
+                                    'Status_Updated' => 'NoWork',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '0',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '1',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+
+                                ];
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                    $success = false;
+                                }
+                            } elseif ($Frame_Data == 'Others') {
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => '',
+                                    'Machine_Name' => '-',
+                                    'Machine_Model' => '-',
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Others',
+                                    'Status_Updated' => 'Others',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '1',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                // echo '<pre>';
+                                // print_r($Work_Allocation);
+                                // exit;
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                    $success = false;
+                                }
+                            } elseif ($Frame_Data == 'Multiple Trainee') {
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => '',
+                                    'Machine_Name' => '-',
+                                    'Machine_Model' => '-',
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Multiple Trainee',
+                                    'Status_Updated' => 'Multiple Trainee',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '1',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                    $success = false;
+                                }
+                            } elseif ($Frame_Data == 'Trainee') {
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => '',
+                                    'Machine_Name' => '-',
+                                    'Machine_Model' => '-',
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Trainee',
+                                    'Status_Updated' => 'Trainee',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '1',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                    $success = false;
+                                }
+                            }
+                        }
+                    } else {
+
+                        if ($Sub_Department === 'Spinning' || $Sub_Department === 'Finishing' ||  $Sub_Department === 'Preparatory' || $Sub_Department == 'SPINNING' || $Sub_Department == 'FINISHING'  || $Sub_Department === 'PREPARATORY') {
+
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                $Duplicate = $Frames[$index] ?? null;
+                                $Frame_Data = $Frames[0] ?: $Duplicate;
+
+
+
+                                $machine_data = $this->db->query("
+            SELECT Machine_Name, Machine_Model 
+            FROM Web_Machine_Mst 
+            WHERE CCode = '$CompanyCode' 
+              AND LCode = '$LocationCode' 
+              AND WorkArea = '$Work_Area' 
+              AND Machine_Id = '$Machine_datas'
+        ")->result();
+
+                                $Machine_Name = $machine_data[0]->Machine_Name ?? '-';
+                                $Machine_Model = $machine_data[0]->Machine_Model ?? '-';
+
+                                $Work_Allocation = [
+                                    'Ccode'            => $CompanyCode,
+                                    'Lcode'            => $LocationCode,
+                                    'Wages'            => $Wages,
+                                    'Machine_Id'       => $Machine_datas,
+                                    'Machine_Name'     => $Machine_Name,
+                                    'Machine_Model'    => $Machine_Model,
+                                    'FirstName'        => $Employee_Name,
+                                    'EmpNo'            => $Employee_Id,
+                                    'ExistingCode'     => $ExistingCode,
+                                    'Shift'            => $Shift,
+                                    'Date'             => $Date,
+                                    'Job_Card_No'      => $Job_Card_No,
+                                    'Work_Type'        => 'Machine',
+                                    'Status_Updated'   => 'Machine',
+                                    'Department'       => $Department,
+                                    'Sub_Department'   => $Sub_Department,
+                                    'Sub_Section'      => $Sub_Section,
+                                    'Screen_Type'      => $Allocation_Screen_Type,
+                                    'OT_Confirmation'  => '-',
+                                    'WorkArea'         => $Work_Area,
+                                    'Frame'            => $Frame_Data,     // M1, M2, ...
+                                    'FrameType'        => '',
+                                    'Description'      => $Description,
+                                    'Type'             => $Allocation_Type,
+                                    'Work_Status'      => '1',
+                                    'Assign_Status'    => '1',
+                                    'Closing_Status'   => '0',
+                                    'IsWork'           => '0',
+                                    'Created_By'       => $Session['UserName'],
+                                    'Created_Time'     => date('Y-m-d H:i:s'),
+                                    'Updated_By'       => '-',
+                                    'Updated_Time'     => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                // Optional: Insert or show for testing
+
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'Work allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning work allocation'];
+                                    $success = false;
+                                }
+                            }
+                        } else {
+
+
+
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                $Frame_Data = '';
+
+
+                                $machine_data = $this->db->query("SELECT Machine_Name, Machine_Model FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Frame = '$Frame_Data'")->result();
+                                $Machine_Name = $machine_data[0]->Machine_Name ?: '-';
+                                $Machine_Model = $machine_data[0]->Machine_Model ?: '-';
+
+
+
+                                $existing_combination = $this->db->query("SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Shift = '$Shift' AND Date = '$Date' AND EmpNo = '$Employee_Id' AND Machine_Id = '$Machine_datas' AND Frame = '$Frame_Data' AND Assign_Status = '1'");
+
+                                if ($existing_combination->num_rows() > 0) {
+                                    $allocation_details[] = ['status' => 'skip', 'message' => 'Duplicate allocation found, skipping insertion'];
+                                    continue;
+                                }
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => $Machine_datas,
+                                    'Machine_Name' => $Machine_Name,
+                                    'Machine_Model' => $Machine_Model,
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Machine',
+                                    'Status_Updated' => 'Machine',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '0',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'Machine allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning machine allocation'];
+                                    $success = false;
+                                }
+                            }
+                        }
+                    }
+                }
+
+            } else if ($LocationCode == 'PRECOT - D') {
+
+
+                $success = true;
+                $allocation_details = [];
+
+                foreach ($input_data['Allocations'] as $row) {
+
+                    $Sub_Department = $row['Department'];
+                    $Shift = $row['Shift'];
+                    $Date = $row['Date'];
+                    $Work_Area = $row['Work_Area'];
+                    $Employee_Id = $row['EmployeeId'];
+                    $Frames = $row['Frames'];
+                    $Machine_Id = $row['Machine_Id'];
+                    $Job_Card_No = $row['JobCardNo'];
+                    $Description = $row['Description'];
+                    $Allocation_Type = $row['Allocation_Type'];
+                    $Allocation_Screen_Type = $row['Allocation_Screen_Type'];
+
+                                        $sql_Job = "SELECT * FROM Web_JobCard_Mst WHERE Lcode = '$LocationCode' AND Ccode = '$CompanyCode' AND Department = '$Sub_Department'  AND WorkArea = '$Work_Area'";
+                    $Query_Job = $this->db->query($sql_Job);
+                    $Result_Job = $Query_Job->result();
+
+
+                    $Job_Card_No =  $Result_Job[0]->JobCard_No ? : '';
+
+                    function getPreviousShift($currentShift, $shiftMaster)
+                    {
+                        $shiftKeys = array_keys($shiftMaster);
+                        if (in_array($currentShift, $shiftKeys)) {
+                            $currentIndex = array_search($currentShift, $shiftKeys);
+                            $previousIndex = ($currentIndex - 1) < 0 ? count($shiftKeys) - 1 : $currentIndex - 1;
+                            return $shiftKeys[$previousIndex];
+                        }
+                        return null;
+                    }
+
+                    $Shift_Master = [
+
+                        'SHIFT1' => 'SHIFT1',
+                        'SHIFT2' => 'SHIFT2',
+                        'SHIFT3' => 'SHIFT3',
+
+                    ];
+
+                    $Current_Shift = $Shift;
+
+                    $Previous_Shift = getPreviousShift($Current_Shift, $Shift_Master);
+
+                    // Check Previous Allocation 
+                   if ($Shift == 'SHIFT1') {
+                        $Previous_Date = date('Y-m-d', strtotime($Date . ' -1 days'));
+                        $Sql_OT_PreviousDay = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst Work
+                            INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                            WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                            AND Work.Date = '$Previous_Date' AND Work.EmpNo = '$Employee_Id'
+                            AND Work.Shift = 'SHIFT3' AND Work.Work_Status = '1'
+                            AND Login.UserID = '$Login_User'";
+                        $this->db->query($Sql_OT_PreviousDay);
+                    }
+
+                    $Sql_OT = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst Work
+                        INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                        WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                        AND Work.Date = '$Date' AND Work.EmpNo = '$Employee_Id'
+                        AND Work.Shift = '$Previous_Shift' AND Work.Work_Status = '1'
+                        AND Login.UserID = '$Login_User'";
+
+                    $Query_OT = $this->db->query($Sql_OT);
+
+
+                    $sql_Job = "SELECT * FROM Web_JobCard_Mst WHERE Lcode = '$LocationCode' AND Ccode = '$CompanyCode' AND Department = '$Sub_Department'  AND WorkArea = '$Work_Area'";
+                    $Query_Job = $this->db->query($sql_Job);
+                    $Result_Job = $Query_Job->result();
+
+
+                    // $Job_Card_No =  $Result_Job[0]->JobCard_No;
+
+
+                    $Employee_Data = $this->db->query("SELECT FirstName, ExistingCode, wages,DeptName,DeptGrp,SubSection_Name FROM Employee_Mst WHERE CompCode = '$CompanyCode' AND ExistingCode = '$Employee_Id'")->result();
+                    if (empty($Employee_Data)) {
+                        $success = false;
+                        $allocation_details[] = ['status' => 'error', 'message' => "Employee $Employee_Id not found"];
+                    }
+
+                    $Employee_Name = $Employee_Data[0]->FirstName;
+                    $ExistingCode = $Employee_Data[0]->ExistingCode;
+                    $Wages = $Employee_Data[0]->wages;
+                    $Department = $Employee_Data[0]->DeptGrp;
+                    $Sub_Section = $Employee_Data[0]->SubSection_Name;
+
+                    if ($Machine_Id == []) {
+
+                        foreach ($Frames as $Frame_Data) {
+
+                            if ($Frame_Data == 'NoWork') {
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => '',
+                                    'Machine_Name' => '-',
+                                    'Machine_Model' => '-',
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'NoWork',
+                                    'Status_Updated' => 'NoWork',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '0',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '1',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+
+                                ];
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                    $success = false;
+                                }
+                            } elseif ($Frame_Data == 'Others') {
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => '',
+                                    'Machine_Name' => '-',
+                                    'Machine_Model' => '-',
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Others',
+                                    'Status_Updated' => 'Others',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '1',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                // echo '<pre>';
+                                // print_r($Work_Allocation);
+                                // exit;
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                    $success = false;
+                                }
+                            } elseif ($Frame_Data == 'Multiple Trainee') {
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => '',
+                                    'Machine_Name' => '-',
+                                    'Machine_Model' => '-',
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Multiple Trainee',
+                                    'Status_Updated' => 'Multiple Trainee',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '1',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                    $success = false;
+                                }
+                            } elseif ($Frame_Data == 'Trainee') {
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => '',
+                                    'Machine_Name' => '-',
+                                    'Machine_Model' => '-',
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Trainee',
+                                    'Status_Updated' => 'Trainee',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '1',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                    $success = false;
+                                }
+                            }
+                        }
+                    } else {
+
+
+
+                        if ($Sub_Department == 'TFO' || $Sub_Department == 'tfo' || $Sub_Department == 'Tfo' ||  $Sub_Department == 'DOUBLING' || $Sub_Department == 'Doubling' || $Sub_Department == 'GASSING'  || $Sub_Department == 'Gassing' || $Sub_Department == 'WINDING' || $Sub_Department == 'Winding') {
+
+                                                   
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                $Duplicate = $Frames[$index] ?? null;
+                                $Frame_Data = $Frames[0] ?: $Duplicate;
+
+
+
+                                $machine_data = $this->db->query("
+            SELECT Machine_Name, Machine_Model 
+            FROM Web_Machine_Mst 
+            WHERE CCode = '$CompanyCode' 
+              AND LCode = '$LocationCode' 
+              AND WorkArea = '$Work_Area' 
+              AND Machine_Id = '$Machine_datas'
+        ")->result();
+
+                                $Machine_Name = $machine_data[0]->Machine_Name ?? '-';
+                                $Machine_Model = $machine_data[0]->Machine_Model ?? '-';
+
+                                $Work_Allocation = [
+                                    'Ccode'            => $CompanyCode,
+                                    'Lcode'            => $LocationCode,
+                                    'Wages'            => $Wages,
+                                    'Machine_Id'       => $Machine_datas,
+                                    'Machine_Name'     => $Machine_Name,
+                                    'Machine_Model'    => $Machine_Model,
+                                    'FirstName'        => $Employee_Name,
+                                    'EmpNo'            => $Employee_Id,
+                                    'ExistingCode'     => $ExistingCode,
+                                    'Shift'            => $Shift,
+                                    'Date'             => $Date,
+                                    'Job_Card_No'      => $Job_Card_No,
+                                    'Work_Type'        => 'Machine',
+                                    'Status_Updated'   => 'Machine',
+                                    'Department'       => $Department,
+                                    'Sub_Department'   => $Sub_Department,
+                                    'Sub_Section'      => $Sub_Section,
+                                    'Screen_Type'      => $Allocation_Screen_Type,
+                                    'OT_Confirmation'  => '-',
+                                    'WorkArea'         => $Work_Area,
+                                    'Frame'            => $Frame_Data,    
+                                    'FrameType'        => '',
+                                    'Description'      => $Description,
+                                    'Type'             => $Allocation_Type,
+                                    'Work_Status'      => '1',
+                                    'Assign_Status'    => '1',
+                                    'Closing_Status'   => '0',
+                                    'IsWork'           => '0',
+                                    'Created_By'       => $Session['UserName'],
+                                    'Created_Time'     => date('Y-m-d H:i:s'),
+                                    'Updated_By'       => '-',
+                                    'Updated_Time'     => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                // Optional: Insert or show for testing
+
+                              $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'Work allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning work allocation'];
+                                    $success = false;
+                                }
+                            }
+
+                        } else {
+
+
+
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                // $Frame_Data = '';
+                                    $Frame_Data = $Frames[0] ?: '';
+
+
+                                $machine_data = $this->db->query("SELECT Machine_Name, Machine_Model FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Frame = '$Frame_Data'")->result();
+                                $Machine_Name = $machine_data[0]->Machine_Name ?: '-';
+                                $Machine_Model = $machine_data[0]->Machine_Model ?: '-';
+
+                                $existing_combination = $this->db->query("SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Shift = '$Shift' AND Date = '$Date' AND EmpNo = '$Employee_Id' AND Machine_Id = '$Machine_datas' AND Frame = '$Frame_Data' AND Assign_Status = '1'");
+
+                                if ($existing_combination->num_rows() > 0) {
+                                    $allocation_details[] = ['status' => 'skip', 'message' => 'Duplicate allocation found, skipping insertion'];
+                                    continue;
+                                }
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => $Machine_datas,
+                                    'Machine_Name' => $Machine_Name,
+                                    'Machine_Model' => $Machine_Model,
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Machine',
+                                    'Status_Updated' => 'Machine',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '0',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'Machine allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning machine allocation'];
+                                    $success = false;
+                                }
+                            }
+                        }
+                    }
+                }
+
+            } else if ($LocationCode == 'PRECOT - M') {
+
+                $success = true;
+                $allocation_details = [];
+
+                foreach ($input_data['Allocations'] as $row) {
+
+                    $Sub_Department = $row['Department'];
+                    $Shift = $row['Shift'];
+                    $Date = $row['Date'];
+                    $Work_Area = $row['Work_Area'];
+                    $Employee_Id = $row['EmployeeId'];
+                    $Frames = $row['Frames'];
+                    $Machine_Id = $row['Machine_Id'];
+                    $Job_Card_No = $row['JobCardNo'];
+                    $Description = $row['Description'];
+                    $Allocation_Type = $row['Allocation_Type'];
+                    $Allocation_Screen_Type = $row['Allocation_Screen_Type'];
+
+
+                    $sql_Job = "SELECT * FROM Web_JobCard_Mst WHERE Lcode = '$LocationCode' AND Ccode = '$CompanyCode' AND Department = '$Sub_Department'  AND WorkArea = '$Work_Area'";
+                    $Query_Job = $this->db->query($sql_Job);
+                    $Result_Job = $Query_Job->result();
+
+
+                    $Job_Card_No =  $Result_Job[0]->JobCard_No;
+
+
+                    $Employee_Data = $this->db->query("SELECT FirstName, ExistingCode, wages,DeptName,DeptGrp,SubSection_Name FROM Employee_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ExistingCode = '$Employee_Id'")->result();
+                    if (empty($Employee_Data)) {
+                        $success = false;
+                        $allocation_details[] = ['status' => 'error', 'message' => "Employee $Employee_Id not found"];
+                    }
+
+                    $Employee_Name = $Employee_Data[0]->FirstName;
+                    $ExistingCode = $Employee_Data[0]->ExistingCode;
+                    $Wages = $Employee_Data[0]->wages;
+                    $Department = $Employee_Data[0]->DeptGrp;
+                    $Sub_Section = $Employee_Data[0]->SubSection_Name;
+
+                    if ($Machine_Id == []) {
+
+                        foreach ($Frames as $Frame_Data) {
+
+                            if ($Frame_Data == 'NoWork') {
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => '',
+                                    'Machine_Name' => '-',
+                                    'Machine_Model' => '-',
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'NoWork',
+                                    'Status_Updated' => 'NoWork',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'Previous_Shift' => '-',
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'WorkArea' => $Work_Area,
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '0',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '1',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+
+                                ];
+
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                    $success = false;
+                                }
+                            } elseif ($Frame_Data == 'Others') {
 
                                 $Work_Allocation = [
                                     'Ccode' => $CompanyCode,
@@ -1167,26 +3102,19 @@ class  Work_Model extends CI_Model
                                     'Updated_Time' => '-',
                                 ];
 
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
+                                // echo '<pre>';
+                                // print_r($Work_Allocation);
+                                // exit;
+
                                 if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
                                     $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
                                 } else {
                                     $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
                                     $success = false;
                                 }
-                            }
-                        } elseif ($Frame_Data == 'Multiple Trainee') {
-
-                            $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
-                            $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
-                            $Work_Duplicated = $Work_Duplicated_Query->num_rows();
-
-                            if ($Work_Duplicated > 0) {
-
-                                $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
-                            } else {
-
-                                $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
-                                $Updated_Query = $this->db->query($Update);
+                            } elseif ($Frame_Data == 'Multiple Trainee') {
 
                                 $Work_Allocation = [
                                     'Ccode' => $CompanyCode,
@@ -1224,26 +3152,15 @@ class  Work_Model extends CI_Model
                                     'Updated_Time' => '-',
                                 ];
 
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
                                 if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
                                     $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
                                 } else {
                                     $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
                                     $success = false;
                                 }
-                            }
-                        } elseif ($Frame_Data == 'Trainee' || $Frame_Data == 'TRAINEE') {
-
-                            $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
-                            $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
-                            $Work_Duplicated = $Work_Duplicated_Query->num_rows();
-
-                            if ($Work_Duplicated > 0) {
-
-                                $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
-                            } else {
-
-                                $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
-                                $Updated_Query = $this->db->query($Update);
+                            } elseif ($Frame_Data == 'Trainee') {
 
                                 $Work_Allocation = [
                                     'Ccode' => $CompanyCode,
@@ -1281,6 +3198,8 @@ class  Work_Model extends CI_Model
                                     'Updated_Time' => '-',
                                 ];
 
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+
                                 if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
                                     $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
                                 } else {
@@ -1289,28 +3208,89 @@ class  Work_Model extends CI_Model
                                 }
                             }
                         }
-                    }
-                } else {
+                    } else {
 
-                    if (
-                        $Sub_Department === 'Spinning-Prod' || $Sub_Department === 'Finishing-Prod' || $Sub_Department == 'SPINNING-PROD' || $Sub_Department == 'FINISHING-PROD' ||  $Sub_Department === 'FINISHING - PM1' ||  $Sub_Department === 'FINISHING - PM2' ||  $Sub_Department === 'SPINNING - PM1' ||  $Sub_Department === 'SPINNING - PM2'
-                        ||  $Sub_Department === 'Finishing - PM1' ||  $Sub_Department === 'Finishing - PM2'  ||  $Sub_Department === 'Spinning - PM1' ||  $Sub_Department === 'Spinning - PM2' || $Sub_Department === 'Preparatory_Prod' || $Sub_Department === 'PREPARATORY' || $Sub_Department == 'TFO'
-                    ) {
+                        if ($Sub_Department == 'Finishing - PM1' || $Sub_Department == 'Finishing - PM2' || $Sub_Department == 'Preparatory - PM1' || $Sub_Department == 'Preparatory - PM2' || $Sub_Department == 'Spinning - PM1' || $Sub_Department == 'Spinning - PM2') {
+
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                $Duplicate = $Frames[$index] ?? null;
+                                $Frame_Data = $Frames[0] ?: $Duplicate;
+
+                                if ($Frame_Data == 'Machine Wise') {
+
+                                    $Frame_Data = 'Machine Wise';
+
+                                    $machine_data = $this->db->query("
+            SELECT Machine_Name, Machine_Model 
+            FROM Web_Machine_Mst 
+            WHERE CCode = '$CompanyCode' 
+              AND LCode = '$LocationCode' 
+              AND WorkArea = '$Work_Area' 
+              AND Machine_Id = '$Machine_datas'
+        ")->result();
+
+                                    $Machine_Name = $machine_data[0]->Machine_Name ?? '-';
+                                    $Machine_Model = $machine_data[0]->Machine_Model ?? '-';
+
+                                    $Work_Allocation = [
+                                        'Ccode'            => $CompanyCode,
+                                        'Lcode'            => $LocationCode,
+                                        'Wages'            => $Wages,
+                                        'Machine_Id'       => $Machine_datas,
+                                        'Machine_Name'     => $Machine_Name,
+                                        'Machine_Model'    => $Machine_Model,
+                                        'FirstName'        => $Employee_Name,
+                                        'EmpNo'            => $Employee_Id,
+                                        'ExistingCode'     => $ExistingCode,
+                                        'Shift'            => $Shift,
+                                        'Date'             => $Date,
+                                        'Job_Card_No'      => $Job_Card_No,
+                                        'Work_Type'        => 'Machine',
+                                        'Status_Updated'   => 'Machine',
+                                        'Department'       => $Department,
+                                        'Sub_Department'   => $Sub_Department,
+                                        'Sub_Section'      => $Sub_Section,
+                                        'Previous_Shift'   => '-',
+                                        'Screen_Type'      => $Allocation_Screen_Type,
+                                        'OT_Confirmation'  => '-',
+                                        'WorkArea'         => $Work_Area,
+                                        'Frame'            => $Frame_Data,     // M1, M2, ...
+                                        'FrameType'        => '',
+                                        'Description'      => $Description,
+                                        'Type'             => $Allocation_Type,
+                                        'Work_Status'      => '1',
+                                        'Assign_Status'    => '1',
+                                        'Closing_Status'   => '0',
+                                        'IsWork'           => '0',
+                                        'Created_By'       => $Session['UserName'],
+                                        'Created_Time'     => date('Y-m-d H:i:s'),
+                                        'Updated_By'       => '-',
+                                        'Updated_Time'     => '-',
+                                    ];
+
+                                    // Optional: Insert or show for testing
 
 
-                        $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
-                        $Updated_Query = $this->db->query($Update);
+                                    $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'Work allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning work allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            }
+                        } else {
 
 
-                        foreach ($Machine_Id as $index => $Machine_datas) {
 
-                            $Duplicate = $Frames[$index] ?? null; // Get the frame value for the current index, or null if not set
-                            $Frame_Data = $Frames[0] ?: $Duplicate; // Set $Frame_Data to "S1" for all machines
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                $Frame_Data = '';
 
 
-                            if ($Frame_Data == 'Machine Wise') {
-
-                                $machine_data = $this->db->query("SELECT Machine_Name, Machine_Model FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Frame = ''")->result();
+                                $machine_data = $this->db->query("SELECT Machine_Name, Machine_Model FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Frame = '$Frame_Data'")->result();
                                 $Machine_Name = $machine_data[0]->Machine_Name ?: '-';
                                 $Machine_Model = $machine_data[0]->Machine_Model ?: '-';
 
@@ -1322,7 +3302,6 @@ class  Work_Model extends CI_Model
                                     $allocation_details[] = ['status' => 'skip', 'message' => 'Duplicate allocation found, skipping insertion'];
                                     continue;
                                 }
-
 
                                 $Work_Allocation = [
                                     'Ccode' => $CompanyCode,
@@ -1342,8 +3321,8 @@ class  Work_Model extends CI_Model
                                     'Department' => $Department,
                                     'Sub_Department' => $Sub_Department,
                                     'Sub_Section' => $Sub_Section,
-                                    'Previous_Shift' => '-',
                                     'Screen_Type' => $Allocation_Screen_Type,
+                                    'Previous_Shift' => '-',
                                     'OT_Confirmation' => '-',
                                     'WorkArea' => $Work_Area,
                                     'Frame' => $Frame_Data,
@@ -1362,6 +3341,7 @@ class  Work_Model extends CI_Model
 
 
 
+                                $this->delete_existing_allocation($Shift, $Date, $Employee_Id);
 
                                 if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
                                     $allocation_details[] = ['status' => 'success', 'message' => 'Machine allocation assigned successfully'];
@@ -1369,8 +3349,467 @@ class  Work_Model extends CI_Model
                                     $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning machine allocation'];
                                     $success = false;
                                 }
-                            } else {
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            redirect(base_url(), 'refresh');
+        }
+    }
 
+
+
+    private function delete_existing_allocation($Shift, $Date, $Employee_Id)
+    {
+        $sql_check_existing = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Shift = '$Shift' AND Date = '$Date' AND EmpNo = '$Employee_Id' AND Work_Status = '1' AND Assign_Status = '0'";
+        $Query = $this->db->query($sql_check_existing);
+
+        // print_r($sql_check_existing);exit;
+
+        if ($Query->num_rows() > 0) {
+            // Delete existing allocation
+            $sql_delete = "DELETE FROM Web_Employee_Work_Allocation_Mst WHERE Shift = '$Shift' AND Date = '$Date' AND EmpNo = '$Employee_Id' AND Work_Status = '1' AND Assign_Status = '0'";
+            $this->db->query($sql_delete);
+        }
+    }
+
+    public function Edit($input_data, $CompanyCode, $LocationCode,$Login_User)
+    {
+        $Session = $this->session->userdata('sess_array');
+        if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+
+
+
+            if ($LocationCode == 'PRECOT - A') {
+
+
+                $success = true;
+                $allocation_details = [];
+
+                foreach ($input_data['Allocations'] as $row) {
+
+                    $Sub_Department = $row['Department'];
+                    $Shift = $row['Shift'];
+                    $Date = $row['Date'];
+                    $Work_Area = $row['Work_Area'];
+                    $Employee_Id = $row['EmployeeId'];
+                    $Frames = $row['Frames'];
+                    $Machine_Id = $row['Machine_Id'];
+                    // $Job_Card_No = $row['JobCardNo'];
+                    $Description = $row['Description'];
+                    $Allocation_Type = $row['Allocation_Type'];
+                    $Allocation_Screen_Type = $row['Allocation_Screen_Type'];
+
+
+                    function getPreviousShift($currentShift, $shiftMaster)
+                    {
+                        $shiftKeys = array_keys($shiftMaster);
+                        if (in_array($currentShift, $shiftKeys)) {
+                            $currentIndex = array_search($currentShift, $shiftKeys);
+                            $previousIndex = ($currentIndex - 1) < 0 ? count($shiftKeys) - 1 : $currentIndex - 1;
+                            return $shiftKeys[$previousIndex];
+                        }
+                        return null;
+                    }
+
+                    $Shift_Master = [
+
+                        'SHIFT1' => 'SHIFT1',
+                        'SHIFT2' => 'SHIFT2',
+                        'SHIFT3' => 'SHIFT3',
+
+                    ];
+
+                    $Current_Shift = $Shift;
+
+                    $Previous_Shift = getPreviousShift($Current_Shift, $Shift_Master);
+
+                    // Check Previous Allocation 
+                   if ($Shift == 'SHIFT1') {
+                        $Previous_Date = date('Y-m-d', strtotime($Date . ' -1 days'));
+                        $Sql_OT_PreviousDay = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst Work
+                            INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                            WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                            AND Work.Date = '$Previous_Date' AND Work.EmpNo = '$Employee_Id'
+                            AND Work.Shift = 'SHIFT3' AND Work.Work_Status = '1'
+                            AND Login.UserID = '$Login_User'";
+                        $this->db->query($Sql_OT_PreviousDay);
+                    }
+
+                    $Sql_OT = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst Work
+                        INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                        WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                        AND Work.Date = '$Date' AND Work.EmpNo = '$Employee_Id'
+                        AND Work.Shift = '$Previous_Shift' AND Work.Work_Status = '1'
+                        AND Login.UserID = '$Login_User'";
+
+                    $Query_OT = $this->db->query($Sql_OT);
+
+
+                    $sql_Job = "SELECT * FROM Web_JobCard_Mst WHERE Lcode = '$LocationCode' AND Ccode = '$CompanyCode' AND Department = '$Sub_Department'  AND WorkArea = '$Work_Area'";
+                    $Query_Job = $this->db->query($sql_Job);
+                    $Result_Job = $Query_Job->result();
+
+                    $Job_Card_No =  $Result_Job[0]->JobCard_No;
+
+                    $Employee_Data = $this->db->query("SELECT FirstName, ExistingCode, wages, DeptName, DeptGrp,SubSection_Name FROM Employee_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ExistingCode = '$Employee_Id'")->result();
+                    if (empty($Employee_Data)) {
+                        $success = false;
+                        $allocation_details[] = ['status' => 'error', 'message' => "Employee $Employee_Id not found"];
+                    }
+
+                    $Employee_Name = $Employee_Data[0]->FirstName;
+                    $ExistingCode = $Employee_Data[0]->ExistingCode;
+                    $Wages = $Employee_Data[0]->wages;
+                    $Department = $Employee_Data[0]->DeptGrp;
+                    $Sub_Section = $Employee_Data[0]->SubSection_Name;
+
+
+                    if ($Machine_Id == [''] || $Machine_Id == []) {
+
+                        foreach ($Frames as $Frame_Data) {
+
+                            if ($Frame_Data == 'NoWork') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'NoWork',
+                                        'Status_Updated' => 'NoWork',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '0',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                        'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                        'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            } elseif ($Frame_Data == 'Others') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'Others',
+                                        'Status_Updated' => 'Others',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '1',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                        'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                        'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            } elseif ($Frame_Data == 'Multiple Trainee') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'Multiple Trainee',
+                                        'Status_Updated' => 'Multiple Trainee',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '1',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                        'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                        'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            } elseif ($Frame_Data == 'Trainee' || $Frame_Data == 'TRAINEE') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'Trainee',
+                                        'Status_Updated' => 'Trainee',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '1',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                        'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                        'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+
+                        if ($Sub_Department === 'Spinning-Prod' || $Sub_Department === 'Finishing-Prod' ||  $Sub_Department === 'Preparatory-Prod' || $Sub_Department == 'SPINNING-PROD' || $Sub_Department == 'FINISHING-PROD'  || $Sub_Department === 'PREPARATORY-PROD') {
+
+
+                            $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                            $Updated_Query = $this->db->query($Update);
+
+
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                $Duplicate   = $Frames[$index] ?? null;
+                                $Frame_Value = $Frames[0] ?: $Duplicate;
+
+                                // $Frame_Data = 'Machine Wise';
+
+
+                                $machine_data = $this->db->query("
+        SELECT Machine_Name, Machine_Model 
+        FROM Web_Machine_Mst 
+        WHERE CCode = '$CompanyCode' 
+          AND LCode = '$LocationCode' 
+          AND WorkArea = '$Work_Area' 
+          AND Frame = '$Frame_Value'
+    ")->result();
+
+                                $Machine_Name = $machine_data[0]->Machine_Name ?? '-';
+                                $Machine_Model = $machine_data[0]->Machine_Model ?? '-';
+
+                                $exis_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst 
+        WHERE Shift = '$Shift' 
+          AND Date = '$Date' 
+          AND EmpNo = '$Employee_Id' 
+          AND Machine_Id = '$Machine_datas' 
+         AND Frame = '$Frame_Value' 
+          AND Assign_Status = '1'";
+                                $existing_combination = $this->db->query($exis_Sql);
+
+
+                                if ($existing_combination->num_rows() > 0) {
+                                    $allocation_details[] = [
+                                        'status'  => 'skip',
+                                        'message' => "Duplicate allocation found for Machine $Machine_datas and Frame $Frame_Value, skipping."
+                                    ];
+                                    continue;
+                                }
+
+
+                                $Work_Allocation = [
+                                    'Ccode'            => $CompanyCode,
+                                    'Lcode'            => $LocationCode,
+                                    'Wages'            => $Wages,
+                                    'Machine_Id'       => $Machine_datas,
+                                    'Machine_Name'     => $Machine_Name,
+                                    'Machine_Model'    => $Machine_Model,
+                                    'FirstName'        => $Employee_Name,
+                                    'EmpNo'            => $Employee_Id,
+                                    'ExistingCode'     => $ExistingCode,
+                                    'Shift'            => $Shift,
+                                    'Date'             => $Date,
+                                    'Job_Card_No'      => $Job_Card_No,
+                                    'Work_Type'        => 'Machine',
+                                    'Status_Updated'   => 'Machine',
+                                    'Department'       => $Department,
+                                    'Sub_Department'   => $Sub_Department,
+                                    'Sub_Section'      => $Sub_Section,
+                                    'Screen_Type'      => $Allocation_Screen_Type,
+                                    'OT_Confirmation'  => '-',
+                                    'WorkArea'         => $Work_Area,
+                                    'Frame'            => $Frame_Value,
+                                    'FrameType'        => '',
+                                    'Description'      => $Description,
+                                    'Type'             => $Allocation_Type,
+                                    'Work_Status'      => '1',
+                                    'Assign_Status'    => '1',
+                                    'Closing_Status'   => '0',
+                                    'IsWork'           => '0',
+                                    'Created_By'       => $Session['UserName'],
+                                    'Created_Time'     => date('Y-m-d H:i:s'),
+                                    'Updated_By'       => '-',
+                                    'Updated_Time'     => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => "Machine allocation inserted: $Frame_Value"];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'DB error during allocation'];
+                                    $success = false;
+                                }
+                            }
+                        } else {
+
+
+
+                            $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                            $Updated_Query = $this->db->query($Update);
+
+
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                $Duplicate = $Frames[$index] ?? null; // Get the frame value for the current index, or null if not set
+                                $Frame_Data = $Frames[0] ?: $Duplicate; // Set $Frame_Data to "S1" for all machines
 
 
                                 $machine_data = $this->db->query("SELECT Machine_Name, Machine_Model FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Frame = '$Frame_Data'")->result();
@@ -1405,12 +3844,1457 @@ class  Work_Model extends CI_Model
                                     'Department' => $Department,
                                     'Sub_Department' => $Sub_Department,
                                     'Sub_Section' => $Sub_Section,
-                                    'Screen_Type' => $Allocation_Screen_Type,
-                                    'Previous_Shift' => '-',
-                                    'OT_Confirmation' => '-',
-
-
                                     'WorkArea' => $Work_Area,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '0',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+
+
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'Machine allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning machine allocation'];
+                                    $success = false;
+                                }
+                            }
+                        }
+                    }
+                }
+                return $allocation_details;
+
+            } else if ($LocationCode == 'PRECOT - C') {
+
+
+
+                $success = true;
+                $allocation_details = [];
+
+                foreach ($input_data['Allocations'] as $row) {
+
+                    $Sub_Department = $row['Department'];
+                    $Shift = $row['Shift'];
+                    $Date = $row['Date'];
+                    $Work_Area = $row['Work_Area'];
+                    $Employee_Id = $row['EmployeeId'];
+                    $Frames = $row['Frames'];
+                    $Machine_Id = $row['Machine_Id'];
+                    // $Job_Card_No = $row['JobCardNo'];
+                    $Description = $row['Description'];
+                    $Allocation_Type = $row['Allocation_Type'];
+                    $Allocation_Screen_Type = $row['Allocation_Screen_Type'];
+
+
+                    function getPreviousShift($currentShift, $shiftMaster)
+                    {
+                        $shiftKeys = array_keys($shiftMaster);
+                        if (in_array($currentShift, $shiftKeys)) {
+                            $currentIndex = array_search($currentShift, $shiftKeys);
+                            $previousIndex = ($currentIndex - 1) < 0 ? count($shiftKeys) - 1 : $currentIndex - 1;
+                            return $shiftKeys[$previousIndex];
+                        }
+                        return null;
+                    }
+
+                    $Shift_Master = [
+
+                        'SHIFT1' => 'SHIFT1',
+                        'SHIFT2' => 'SHIFT2',
+                        'SHIFT3' => 'SHIFT3',
+
+                    ];
+
+                    $Current_Shift = $Shift;
+
+                    $Previous_Shift = getPreviousShift($Current_Shift, $Shift_Master);
+
+                    // Check Previous Allocation 
+                   if ($Shift == 'SHIFT1') {
+                        $Previous_Date = date('Y-m-d', strtotime($Date . ' -1 days'));
+                        $Sql_OT_PreviousDay = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst Work
+                            INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                            WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                            AND Work.Date = '$Previous_Date' AND Work.EmpNo = '$Employee_Id'
+                            AND Work.Shift = 'SHIFT3' AND Work.Work_Status = '1'
+                            AND Login.UserID = '$Login_User'";
+                        $this->db->query($Sql_OT_PreviousDay);
+                    }
+
+                    $Sql_OT = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst Work
+                        INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                        WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                        AND Work.Date = '$Date' AND Work.EmpNo = '$Employee_Id'
+                        AND Work.Shift = '$Previous_Shift' AND Work.Work_Status = '1'
+                        AND Login.UserID = '$Login_User'";
+
+                    $Query_OT = $this->db->query($Sql_OT);
+
+                    $sql_Job = "SELECT * FROM Web_JobCard_Mst WHERE Lcode = '$LocationCode' AND Ccode = '$CompanyCode' AND Department = '$Sub_Department'  AND WorkArea = '$Work_Area'";
+                    $Query_Job = $this->db->query($sql_Job);
+                    $Result_Job = $Query_Job->result();
+
+                    $Job_Card_No =  $Result_Job[0]->JobCard_No;
+
+                    $Employee_Data = $this->db->query("SELECT FirstName, ExistingCode, wages, DeptName, DeptGrp,SubSection_Name FROM Employee_Mst WHERE CompCode = '$CompanyCode' AND ExistingCode = '$Employee_Id'")->result();
+                    if (empty($Employee_Data)) {
+                        $success = false;
+                        $allocation_details[] = ['status' => 'error', 'message' => "Employee $Employee_Id not found"];
+                    }
+
+                    $Employee_Name = $Employee_Data[0]->FirstName;
+                    $ExistingCode = $Employee_Data[0]->ExistingCode;
+                    $Wages = $Employee_Data[0]->wages;
+                    $Department = $Employee_Data[0]->DeptGrp;
+                    $Sub_Section = $Employee_Data[0]->SubSection_Name;
+
+
+                    if ($Machine_Id == [''] || $Machine_Id == []) {
+
+                        foreach ($Frames as $Frame_Data) {
+
+                            if ($Frame_Data == 'NoWork') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'NoWork',
+                                        'Status_Updated' => 'NoWork',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'Previous_Shift' => '-',
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '0',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                        'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                        'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            } elseif ($Frame_Data == 'Others') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'Others',
+                                        'Status_Updated' => 'Others',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'Previous_Shift' => '-',
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '1',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                        'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                        'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            } elseif ($Frame_Data == 'Multiple Trainee') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'Multiple Trainee',
+                                        'Status_Updated' => 'Multiple Trainee',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'Previous_Shift' => '-',
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '1',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                        'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                        'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            } elseif ($Frame_Data == 'Trainee' || $Frame_Data == 'TRAINEE') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'Trainee',
+                                        'Status_Updated' => 'Trainee',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'Previous_Shift' => '-',
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '1',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                        'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                        'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+
+                        $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                        $Updated_Query = $this->db->query($Update);
+
+                        if ($Sub_Department === 'Spinning' || $Sub_Department === 'Finishing' ||  $Sub_Department === 'Preparatory' || $Sub_Department == 'SPINNING' || $Sub_Department == 'FINISHING'  || $Sub_Department === 'PREPARATORY') {
+
+
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                $Duplicate   = $Frames[$index] ?? null;
+                                $Frame_Value = $Frames[0] ?: $Duplicate;
+
+                                // $Frame_Data = 'Machine Wise';
+
+
+                                $machine_data = $this->db->query("
+        SELECT Machine_Name, Machine_Model 
+        FROM Web_Machine_Mst 
+        WHERE CCode = '$CompanyCode' 
+          AND LCode = '$LocationCode' 
+          AND WorkArea = '$Work_Area' 
+          AND Frame = '$Frame_Value'
+    ")->result();
+
+                                $Machine_Name = $machine_data[0]->Machine_Name ?? '-';
+                                $Machine_Model = $machine_data[0]->Machine_Model ?? '-';
+
+                                //                         $exis_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst 
+                                // WHERE Shift = '$Shift' 
+                                //   AND Date = '$Date' 
+                                //   AND EmpNo = '$Employee_Id' 
+                                //   AND Machine_Id = '$Machine_datas' 
+                                //  AND Frame = '$Frame_Value' 
+                                //   AND Assign_Status = '1'";
+                                //                         $existing_combination = $this->db->query($exis_Sql);
+
+
+                                //                         if ($existing_combination->num_rows() > 0) {
+                                //                             $allocation_details[] = [
+                                //                                 'status'  => 'skip',
+                                //                                 'message' => "Duplicate allocation found for Machine $Machine_datas and Frame $Frame_Value, skipping."
+                                //                             ];
+                                //                             continue;
+                                //                         }
+
+
+                                $Work_Allocation = [
+                                    'Ccode'            => $CompanyCode,
+                                    'Lcode'            => $LocationCode,
+                                    'Wages'            => $Wages,
+                                    'Machine_Id'       => $Machine_datas,
+                                    'Machine_Name'     => $Machine_Name,
+                                    'Machine_Model'    => $Machine_Model,
+                                    'FirstName'        => $Employee_Name,
+                                    'EmpNo'            => $Employee_Id,
+                                    'ExistingCode'     => $ExistingCode,
+                                    'Shift'            => $Shift,
+                                    'Date'             => $Date,
+                                    'Job_Card_No'      => $Job_Card_No,
+                                    'Work_Type'        => 'Machine',
+                                    'Status_Updated'   => 'Machine',
+                                    'Department'       => $Department,
+                                    'Sub_Department'   => $Sub_Department,
+                                    'Sub_Section'      => $Sub_Section,
+                                    'Screen_Type'      => $Allocation_Screen_Type,
+                                    'OT_Confirmation'  => '-',
+                                    'WorkArea'         => $Work_Area,
+                                    'Frame'            => $Frame_Value,
+                                    'FrameType'        => '',
+                                    'Description'      => $Description,
+                                    'Type'             => $Allocation_Type,
+                                    'Work_Status'      => '1',
+                                    'Assign_Status'    => '1',
+                                    'Closing_Status'   => '0',
+                                    'IsWork'           => '0',
+                                    'Created_By'       => $Session['UserName'],
+                                    'Created_Time'     => date('Y-m-d H:i:s'),
+                                    'Updated_By'       => '-',
+                                    'Updated_Time'     => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => "Machine allocation inserted: $Frame_Value"];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'DB error during allocation'];
+                                    $success = false;
+                                }
+                            }
+                        } else {
+
+
+
+                            $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                            $Updated_Query = $this->db->query($Update);
+
+
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                $Duplicate = $Frames[$index] ?? null; // Get the frame value for the current index, or null if not set
+                                $Frame_Data = $Frames[0] ?: $Duplicate; // Set $Frame_Data to "S1" for all machines
+
+
+                                $machine_data = $this->db->query("SELECT Machine_Name, Machine_Model FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Frame = '$Frame_Data'")->result();
+                                $Machine_Name = $machine_data[0]->Machine_Name ?: '-';
+                                $Machine_Model = $machine_data[0]->Machine_Model ?: '-';
+
+
+
+                                $existing_combination = $this->db->query("SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Shift = '$Shift' AND Date = '$Date' AND EmpNo = '$Employee_Id' AND Machine_Id = '$Machine_datas' AND Frame = '$Frame_Data' AND Assign_Status = '1'");
+
+                                if ($existing_combination->num_rows() > 0) {
+                                    $allocation_details[] = ['status' => 'skip', 'message' => 'Duplicate allocation found, skipping insertion'];
+                                    continue;
+                                }
+
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => $Machine_datas,
+                                    'Machine_Name' => $Machine_Name,
+                                    'Machine_Model' => $Machine_Model,
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Machine',
+                                    'Status_Updated' => 'Machine',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'WorkArea' => $Work_Area,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '0',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+
+
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'Machine allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning machine allocation'];
+                                    $success = false;
+                                }
+                            }
+                        }
+                    }
+                }
+                return $allocation_details;
+
+            } else if ($LocationCode == 'PRECOT - D') {
+
+
+
+                $success = true;
+                $allocation_details = [];
+
+                foreach ($input_data['Allocations'] as $row) {
+
+                    $Sub_Department = $row['Department'];
+                    $Shift = $row['Shift'];
+                    $Date = $row['Date'];
+                    $Work_Area = $row['Work_Area'];
+                    $Employee_Id = $row['EmployeeId'];
+                    $Frames = $row['Frames'];
+                    $Machine_Id = $row['Machine_Id'];
+                    // $Job_Card_No = $row['JobCardNo'];
+                    $Description = $row['Description'];
+                    $Allocation_Type = $row['Allocation_Type'];
+                    $Allocation_Screen_Type = $row['Allocation_Screen_Type'];
+
+
+                    function getPreviousShift($currentShift, $shiftMaster)
+                    {
+                        $shiftKeys = array_keys($shiftMaster);
+                        if (in_array($currentShift, $shiftKeys)) {
+                            $currentIndex = array_search($currentShift, $shiftKeys);
+                            $previousIndex = ($currentIndex - 1) < 0 ? count($shiftKeys) - 1 : $currentIndex - 1;
+                            return $shiftKeys[$previousIndex];
+                        }
+                        return null;
+                    }
+
+                    $Shift_Master = [
+
+                        'SHIFT1' => 'SHIFT1',
+                        'SHIFT2' => 'SHIFT2',
+                        'SHIFT3' => 'SHIFT3',
+
+                    ];
+
+                    $Current_Shift = $Shift;
+
+                    $Previous_Shift = getPreviousShift($Current_Shift, $Shift_Master);
+
+                    // Check Previous Allocation 
+                   if ($Shift == 'SHIFT1') {
+                        $Previous_Date = date('Y-m-d', strtotime($Date . ' -1 days'));
+                        $Sql_OT_PreviousDay = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst Work
+                            INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                            WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                            AND Work.Date = '$Previous_Date' AND Work.EmpNo = '$Employee_Id'
+                            AND Work.Shift = 'SHIFT3' AND Work.Work_Status = '1'
+                            AND Login.UserID = '$Login_User'";
+                        $this->db->query($Sql_OT_PreviousDay);
+                    }
+
+                    $Sql_OT = "SELECT 1 FROM Web_Employee_Work_Allocation_Mst Work
+                        INNER JOIN UserDetails_Det Login ON Work.Lcode = Login.Lcode AND Work.Ccode = Login.Ccode AND Login.Name = Work.Sub_Department
+                        WHERE Work.Lcode = '$LocationCode' AND Login.Ccode = '$CompanyCode'
+                        AND Work.Date = '$Date' AND Work.EmpNo = '$Employee_Id'
+                        AND Work.Shift = '$Previous_Shift' AND Work.Work_Status = '1'
+                        AND Login.UserID = '$Login_User'";
+
+                    $Query_OT = $this->db->query($Sql_OT);
+
+                    $sql_Job = "SELECT * FROM Web_JobCard_Mst WHERE Lcode = '$LocationCode' AND Ccode = '$CompanyCode' AND Department = '$Sub_Department'  AND WorkArea = '$Work_Area'";
+                    $Query_Job = $this->db->query($sql_Job);
+                    $Result_Job = $Query_Job->result();
+
+                    $Job_Card_No =  $Result_Job[0]->JobCard_No;
+
+                    $Employee_Data = $this->db->query("SELECT FirstName, ExistingCode, wages, DeptName, DeptGrp,SubSection_Name FROM Employee_Mst WHERE CompCode = '$CompanyCode' AND ExistingCode = '$Employee_Id'")->result();
+                    if (empty($Employee_Data)) {
+                        $success = false;
+                        $allocation_details[] = ['status' => 'error', 'message' => "Employee $Employee_Id not found"];
+                    }
+
+                    $Employee_Name = $Employee_Data[0]->FirstName;
+                    $ExistingCode = $Employee_Data[0]->ExistingCode;
+                    $Wages = $Employee_Data[0]->wages;
+                    $Department = $Employee_Data[0]->DeptGrp;
+                    $Sub_Section = $Employee_Data[0]->SubSection_Name;
+
+
+                    if ($Machine_Id == [''] || $Machine_Id == []) {
+
+                        foreach ($Frames as $Frame_Data) {
+
+                            if ($Frame_Data == 'NoWork') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'NoWork',
+                                        'Status_Updated' => 'NoWork',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '0',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                        'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                        'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            } elseif ($Frame_Data == 'Others') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'Others',
+                                        'Status_Updated' => 'Others',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '1',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                        'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                        'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            } elseif ($Frame_Data == 'Multiple Trainee') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'Multiple Trainee',
+                                        'Status_Updated' => 'Multiple Trainee',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '1',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                        'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                        'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            } elseif ($Frame_Data == 'Trainee' || $Frame_Data == 'TRAINEE') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'Trainee',
+                                        'Status_Updated' => 'Trainee',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '1',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                        'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                        'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+
+                            $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                            $Updated_Query = $this->db->query($Update);
+
+                        if ($Sub_Department == 'TFO' || $Sub_Department == 'TFO' ||  $Sub_Department == 'DOUBLING' || $Sub_Department == 'Doubling' || $Sub_Department == 'GASSING'  || $Sub_Department == 'Gassing' || $Sub_Department == 'WINDING' || $Sub_Department == 'Winding') {
+
+
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                $Duplicate   = $Frames[$index] ?? null;
+                                $Frame_Value = $Frames[0] ?: $Duplicate;
+
+                                // $Frame_Data = 'Machine Wise';
+
+
+                                $machine_data = $this->db->query("
+        SELECT Machine_Name, Machine_Model 
+        FROM Web_Machine_Mst 
+        WHERE CCode = '$CompanyCode' 
+          AND LCode = '$LocationCode' 
+          AND WorkArea = '$Work_Area' 
+          AND Frame = '$Frame_Value'
+    ")->result();
+
+                                $Machine_Name = $machine_data[0]->Machine_Name ?? '-';
+                                $Machine_Model = $machine_data[0]->Machine_Model ?? '-';
+
+                                //                         $exis_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst 
+                                // WHERE Shift = '$Shift' 
+                                //   AND Date = '$Date' 
+                                //   AND EmpNo = '$Employee_Id' 
+                                //   AND Machine_Id = '$Machine_datas' 
+                                //  AND Frame = '$Frame_Value' 
+                                //   AND Assign_Status = '1'";
+                                //                         $existing_combination = $this->db->query($exis_Sql);
+
+
+                                //                         if ($existing_combination->num_rows() > 0) {
+                                                            
+                                //                             $allocation_details[] = [
+                                //                                 'status'  => 'skip',
+                                //                                 'message' => "Duplicate allocation found for Machine $Machine_datas and Frame $Frame_Value, skipping."
+                                //                             ];
+                                //                             continue;
+                                //                         }
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Value' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } 
+
+
+                                $Work_Allocation = [
+                                    'Ccode'            => $CompanyCode,
+                                    'Lcode'            => $LocationCode,
+                                    'Wages'            => $Wages,
+                                    'Machine_Id'       => $Machine_datas,
+                                    'Machine_Name'     => $Machine_Name,
+                                    'Machine_Model'    => $Machine_Model,
+                                    'FirstName'        => $Employee_Name,
+                                    'EmpNo'            => $Employee_Id,
+                                    'ExistingCode'     => $ExistingCode,
+                                    'Shift'            => $Shift,
+                                    'Date'             => $Date,
+                                    'Job_Card_No'      => $Job_Card_No,
+                                    'Work_Type'        => 'Machine',
+                                    'Status_Updated'   => 'Machine',
+                                    'Department'       => $Department,
+                                    'Sub_Department'   => $Sub_Department,
+                                    'Sub_Section'      => $Sub_Section,
+                                    'Screen_Type'      => $Allocation_Screen_Type,
+                                    'OT_Confirmation'  => '-',
+                                    'WorkArea'         => $Work_Area,
+                                    'Frame'            => $Frame_Value,
+                                    'FrameType'        => '',
+                                    'Description'      => $Description,
+                                    'Type'             => $Allocation_Type,
+                                    'Work_Status'      => '1',
+                                    'Assign_Status'    => '1',
+                                    'Closing_Status'   => '0',
+                                    'IsWork'           => '0',
+                                    'Created_By'       => $Session['UserName'],
+                                    'Created_Time'     => date('Y-m-d H:i:s'),
+                                    'Updated_By'       => '-',
+                                    'Updated_Time'     => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => "Machine allocation inserted: $Frame_Value"];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'DB error during allocation'];
+                                    $success = false;
+                                }
+                            }
+                        } else {
+
+
+
+                            $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                            $Updated_Query = $this->db->query($Update);
+
+
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                $Duplicate = $Frames[$index] ?? null; // Get the frame value for the current index, or null if not set
+                                $Frame_Data = $Frames[0] ?: $Duplicate; // Set $Frame_Data to "S1" for all machines
+
+
+                                $machine_data = $this->db->query("SELECT Machine_Name, Machine_Model FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Frame = '$Frame_Data'")->result();
+                                $Machine_Name = $machine_data[0]->Machine_Name ?: '-';
+                                $Machine_Model = $machine_data[0]->Machine_Model ?: '-';
+
+
+
+                                $existing_combination = $this->db->query("SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Shift = '$Shift' AND Date = '$Date' AND EmpNo = '$Employee_Id' AND Machine_Id = '$Machine_datas' AND Frame = '$Frame_Data' AND Assign_Status = '1'");
+
+                                if ($existing_combination->num_rows() > 0) {
+                                    $allocation_details[] = ['status' => 'skip', 'message' => 'Duplicate allocation found, skipping insertion'];
+                                    continue;
+                                }
+
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => $Machine_datas,
+                                    'Machine_Name' => $Machine_Name,
+                                    'Machine_Model' => $Machine_Model,
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Machine',
+                                    'Status_Updated' => 'Machine',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'WorkArea' => $Work_Area,
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
+                                    'Frame' => $Frame_Data,
+                                    'FrameType' => '',
+                                    'Description' => $Description,
+                                    'Type' => $Allocation_Type,
+                                    'Work_Status' => '1',
+                                    'Assign_Status' => '1',
+                                    'Closing_Status' => '0',
+                                    'IsWork' => '0',
+                                    'Created_By' => $Session['UserName'],
+                                    'Created_Time' => date('Y-m-d H:i:s'),
+                                    'Updated_By' => '-',
+                                    'Updated_Time' => '-',
+                                    'Working_Type' => $Query_OT->num_rows() == 1 ? 'OT' : '',
+                                    'Previous_Shift' => $Query_OT->num_rows() == 1 ? $Previous_Shift : ''
+                                ];
+
+
+
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => 'Machine allocation assigned successfully'];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning machine allocation'];
+                                    $success = false;
+                                }
+                            }
+                        }
+                    }
+                }
+                return $allocation_details;
+
+            } else if ($LocationCode == 'PRECOT - M') {
+
+
+
+                $success = true;
+                $allocation_details = [];
+
+                foreach ($input_data['Allocations'] as $row) {
+
+                    $Sub_Department = $row['Department'];
+                    $Shift = $row['Shift'];
+                    $Date = $row['Date'];
+                    $Work_Area = $row['Work_Area'];
+                    $Employee_Id = $row['EmployeeId'];
+                    $Frames = $row['Frames'];
+                    $Machine_Id = $row['Machine_Id'];
+                    // $Job_Card_No = $row['JobCardNo'];
+                    $Description = $row['Description'];
+                    $Allocation_Type = $row['Allocation_Type'];
+                    $Allocation_Screen_Type = $row['Allocation_Screen_Type'];
+
+                    $sql_Job = "SELECT * FROM Web_JobCard_Mst WHERE Lcode = '$LocationCode' AND Ccode = '$CompanyCode' AND Department = '$Sub_Department'  AND WorkArea = '$Work_Area'";
+                    $Query_Job = $this->db->query($sql_Job);
+                    $Result_Job = $Query_Job->result();
+
+                    $Job_Card_No =  $Result_Job[0]->JobCard_No;
+
+                    $Employee_Data = $this->db->query("SELECT FirstName, ExistingCode, wages, DeptName, DeptGrp,SubSection_Name FROM Employee_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ExistingCode = '$Employee_Id'")->result();
+                    if (empty($Employee_Data)) {
+                        $success = false;
+                        $allocation_details[] = ['status' => 'error', 'message' => "Employee $Employee_Id not found"];
+                    }
+
+                    $Employee_Name = $Employee_Data[0]->FirstName;
+                    $ExistingCode = $Employee_Data[0]->ExistingCode;
+                    $Wages = $Employee_Data[0]->wages;
+                    $Department = $Employee_Data[0]->DeptGrp;
+                    $Sub_Section = $Employee_Data[0]->SubSection_Name;
+
+
+                    if ($Machine_Id == [''] || $Machine_Id == []) {
+
+                        foreach ($Frames as $Frame_Data) {
+
+                            if ($Frame_Data == 'NoWork') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'NoWork',
+                                        'Status_Updated' => 'NoWork',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'Previous_Shift' => '-',
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '0',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            } elseif ($Frame_Data == 'Others') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'Others',
+                                        'Status_Updated' => 'Others',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'Previous_Shift' => '-',
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '1',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            } elseif ($Frame_Data == 'Multiple Trainee') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'Multiple Trainee',
+                                        'Status_Updated' => 'Multiple Trainee',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'Previous_Shift' => '-',
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '1',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            } elseif ($Frame_Data == 'Trainee' || $Frame_Data == 'TRAINEE') {
+
+                                $Work_Duplicated_Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Date' AND Shift = '$Shift' AND Frame = '$Frame_Data' AND Work_Status = '1' AND Assign_Status = '1' AND EmpNo = '$Employee_Id' AND Department = '$Department' AND WorkArea = '$Work_Area' AND Job_Card_No = '$Job_Card_No'";
+                                $Work_Duplicated_Query = $this->db->query($Work_Duplicated_Sql);
+                                $Work_Duplicated = $Work_Duplicated_Query->num_rows();
+
+                                if ($Work_Duplicated > 0) {
+
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'Allocated Details No Changes.!'];
+                                } else {
+
+                                    $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                                    $Updated_Query = $this->db->query($Update);
+
+                                    $Work_Allocation = [
+                                        'Ccode' => $CompanyCode,
+                                        'Lcode' => $LocationCode,
+                                        'Wages' => $Wages,
+                                        'Machine_Id' => '',
+                                        'Machine_Name' => '-',
+                                        'Machine_Model' => '-',
+                                        'FirstName' => $Employee_Name,
+                                        'EmpNo' => $Employee_Id,
+                                        'ExistingCode' => $ExistingCode,
+                                        'Shift' => $Shift,
+                                        'Date' => $Date,
+                                        'Job_Card_No' => $Job_Card_No,
+                                        'Work_Type' => 'Trainee',
+                                        'Status_Updated' => 'Trainee',
+                                        'Department' => $Department,
+                                        'Sub_Department' => $Sub_Department,
+                                        'Sub_Section' => $Sub_Section,
+                                        'Screen_Type' => $Allocation_Screen_Type,
+                                        'Previous_Shift' => '-',
+                                        'OT_Confirmation' => '-',
+                                        'WorkArea' => $Work_Area,
+                                        'Frame' => $Frame_Data,
+                                        'FrameType' => '',
+                                        'Description' => $Description,
+                                        'Type' => $Allocation_Type,
+                                        'Work_Status' => '1',
+                                        'Assign_Status' => '1',
+                                        'Closing_Status' => '0',
+                                        'IsWork' => '1',
+                                        'Created_By' => $Session['UserName'],
+                                        'Created_Time' => date('Y-m-d H:i:s'),
+                                        'Updated_By' => '-',
+                                        'Updated_Time' => '-',
+                                    ];
+
+                                    if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                        $allocation_details[] = ['status' => 'success', 'message' => 'NoWork allocation assigned successfully'];
+                                    } else {
+                                        $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning NoWork allocation'];
+                                        $success = false;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+
+                        if ($Sub_Department == 'Finishing - PM1' || $Sub_Department == 'Finishing - PM2' || $Sub_Department == 'Preparatory - PM1' || $Sub_Department == 'Preparatory - PM2' || $Sub_Department == 'Spinning - PM1' || $Sub_Department == 'Spinning - PM2') {
+
+
+
+                            $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                            $Updated_Query = $this->db->query($Update);
+
+
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                $Duplicate   = $Frames[$index] ?? null;
+                                $Frame_Value = $Frames[0] ?: $Duplicate;
+
+                                $Frame_Data = 'Machine Wise';
+
+
+                                $machine_data = $this->db->query("
+        SELECT Machine_Name, Machine_Model 
+        FROM Web_Machine_Mst 
+        WHERE CCode = '$CompanyCode' 
+          AND LCode = '$LocationCode' 
+          AND WorkArea = '$Work_Area' 
+          AND Frame = '$Frame_Data'
+    ")->result();
+
+                                $Machine_Name = $machine_data[0]->Machine_Name ?? '-';
+                                $Machine_Model = $machine_data[0]->Machine_Model ?? '-';
+
+                                $existing_combination = $this->db->query("
+        SELECT * FROM Web_Employee_Work_Allocation_Mst 
+        WHERE Shift = '$Shift' 
+          AND Date = '$Date' 
+          AND EmpNo = '$Employee_Id' 
+          AND Machine_Id = '$Machine_datas' 
+          AND Frame = '$Frame_Data' 
+          AND Assign_Status = '1'
+    ");
+
+                                if ($existing_combination->num_rows() > 0) {
+                                    $allocation_details[] = [
+                                        'status'  => 'skip',
+                                        'message' => "Duplicate allocation found for Machine $Machine_datas and Frame $Frame_Data, skipping."
+                                    ];
+                                    continue;
+                                }
+
+                                $Work_Allocation = [
+                                    'Ccode'            => $CompanyCode,
+                                    'Lcode'            => $LocationCode,
+                                    'Wages'            => $Wages,
+                                    'Machine_Id'       => $Machine_datas,
+                                    'Machine_Name'     => $Machine_Name,
+                                    'Machine_Model'    => $Machine_Model,
+                                    'FirstName'        => $Employee_Name,
+                                    'EmpNo'            => $Employee_Id,
+                                    'ExistingCode'     => $ExistingCode,
+                                    'Shift'            => $Shift,
+                                    'Date'             => $Date,
+                                    'Job_Card_No'      => $Job_Card_No,
+                                    'Work_Type'        => 'Machine',
+                                    'Status_Updated'   => 'Machine',
+                                    'Department'       => $Department,
+                                    'Sub_Department'   => $Sub_Department,
+                                    'Sub_Section'      => $Sub_Section,
+                                    'Previous_Shift'   => '-',
+                                    'Screen_Type'      => $Allocation_Screen_Type,
+                                    'OT_Confirmation'  => '-',
+                                    'WorkArea'         => $Work_Area,
+                                    'Frame'            => $Frame_Data,
+                                    'FrameType'        => '',
+                                    'Description'      => $Description,
+                                    'Type'             => $Allocation_Type,
+                                    'Work_Status'      => '1',
+                                    'Assign_Status'    => '1',
+                                    'Closing_Status'   => '0',
+                                    'IsWork'           => '0',
+                                    'Created_By'       => $Session['UserName'],
+                                    'Created_Time'     => date('Y-m-d H:i:s'),
+                                    'Updated_By'       => '-',
+                                    'Updated_Time'     => '-',
+                                ];
+
+                                if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
+                                    $allocation_details[] = ['status' => 'success', 'message' => "Machine allocation inserted: $Frame_Data"];
+                                } else {
+                                    $allocation_details[] = ['status' => 'error', 'message' => 'DB error during allocation'];
+                                    $success = false;
+                                }
+                            }
+                        } else {
+
+
+
+                            $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
+                            $Updated_Query = $this->db->query($Update);
+
+
+                            foreach ($Machine_Id as $index => $Machine_datas) {
+
+                                $Duplicate = $Frames[$index] ?? null; // Get the frame value for the current index, or null if not set
+                                $Frame_Data = $Frames[0] ?: $Duplicate; // Set $Frame_Data to "S1" for all machines
+
+
+                                $machine_data = $this->db->query("SELECT Machine_Name, Machine_Model FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Frame = '$Frame_Data'")->result();
+                                $Machine_Name = $machine_data[0]->Machine_Name ?: '-';
+                                $Machine_Model = $machine_data[0]->Machine_Model ?: '-';
+
+
+
+                                $existing_combination = $this->db->query("SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Shift = '$Shift' AND Date = '$Date' AND EmpNo = '$Employee_Id' AND Machine_Id = '$Machine_datas' AND Frame = '$Frame_Data' AND Assign_Status = '1'");
+
+                                if ($existing_combination->num_rows() > 0) {
+                                    $allocation_details[] = ['status' => 'skip', 'message' => 'Duplicate allocation found, skipping insertion'];
+                                    continue;
+                                }
+
+
+                                $Work_Allocation = [
+                                    'Ccode' => $CompanyCode,
+                                    'Lcode' => $LocationCode,
+                                    'Wages' => $Wages,
+                                    'Machine_Id' => $Machine_datas,
+                                    'Machine_Name' => $Machine_Name,
+                                    'Machine_Model' => $Machine_Model,
+                                    'FirstName' => $Employee_Name,
+                                    'EmpNo' => $Employee_Id,
+                                    'ExistingCode' => $ExistingCode,
+                                    'Shift' => $Shift,
+                                    'Date' => $Date,
+                                    'Job_Card_No' => $Job_Card_No,
+                                    'Work_Type' => 'Machine',
+                                    'Status_Updated' => 'Machine',
+                                    'Department' => $Department,
+                                    'Sub_Department' => $Sub_Department,
+                                    'Sub_Section' => $Sub_Section,
+                                    'WorkArea' => $Work_Area,
+                                    'Previous_Shift' => '-',
+                                    'Screen_Type' => $Allocation_Screen_Type,
+                                    'OT_Confirmation' => '-',
                                     'Frame' => $Frame_Data,
                                     'FrameType' => '',
                                     'Description' => $Description,
@@ -1436,84 +5320,10 @@ class  Work_Model extends CI_Model
                                 }
                             }
                         }
-                    } else {
-
-
-
-                        $Update = "UPDATE Web_Employee_Work_Allocation_Mst SET Work_Status = '0', Assign_Status = '0' WHERE Date = '$Date' AND Shift = '$Shift' AND EmpNo = '$Employee_Id'";
-                        $Updated_Query = $this->db->query($Update);
-
-
-                        foreach ($Machine_Id as $index => $Machine_datas) {
-
-                            $Duplicate = $Frames[$index] ?? null; // Get the frame value for the current index, or null if not set
-                            $Frame_Data = $Frames[0] ?: $Duplicate; // Set $Frame_Data to "S1" for all machines
-
-
-                            $machine_data = $this->db->query("SELECT Machine_Name, Machine_Model FROM Web_Machine_Mst WHERE CCode = '$CompanyCode' AND LCode = '$LocationCode' AND WorkArea = '$Work_Area' AND Frame = '$Frame_Data'")->result();
-                            $Machine_Name = $machine_data[0]->Machine_Name ?: '-';
-                            $Machine_Model = $machine_data[0]->Machine_Model ?: '-';
-
-
-
-                            $existing_combination = $this->db->query("SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Shift = '$Shift' AND Date = '$Date' AND EmpNo = '$Employee_Id' AND Machine_Id = '$Machine_datas' AND Frame = '$Frame_Data' AND Assign_Status = '1'");
-
-                            if ($existing_combination->num_rows() > 0) {
-                                $allocation_details[] = ['status' => 'skip', 'message' => 'Duplicate allocation found, skipping insertion'];
-                                continue;
-                            }
-
-
-                            $Work_Allocation = [
-                                'Ccode' => $CompanyCode,
-                                'Lcode' => $LocationCode,
-                                'Wages' => $Wages,
-                                'Machine_Id' => $Machine_datas,
-                                'Machine_Name' => $Machine_Name,
-                                'Machine_Model' => $Machine_Model,
-                                'FirstName' => $Employee_Name,
-                                'EmpNo' => $Employee_Id,
-                                'ExistingCode' => $ExistingCode,
-                                'Shift' => $Shift,
-                                'Date' => $Date,
-                                'Job_Card_No' => $Job_Card_No,
-                                'Work_Type' => 'Machine',
-                                'Status_Updated' => 'Machine',
-                                'Department' => $Department,
-                                'Sub_Department' => $Sub_Department,
-                                'Sub_Section' => $Sub_Section,
-                                'WorkArea' => $Work_Area,
-                                'Previous_Shift' => '-',
-                                'Screen_Type' => $Allocation_Screen_Type,
-                                'OT_Confirmation' => '-',
-                                'Frame' => $Frame_Data,
-                                'FrameType' => '',
-                                'Description' => $Description,
-                                'Type' => $Allocation_Type,
-                                'Work_Status' => '1',
-                                'Assign_Status' => '1',
-                                'Closing_Status' => '0',
-                                'IsWork' => '0',
-                                'Created_By' => $Session['UserName'],
-                                'Created_Time' => date('Y-m-d H:i:s'),
-                                'Updated_By' => '-',
-                                'Updated_Time' => '-',
-                            ];
-
-
-
-
-                            if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Work_Allocation)) {
-                                $allocation_details[] = ['status' => 'success', 'message' => 'Machine allocation assigned successfully'];
-                            } else {
-                                $allocation_details[] = ['status' => 'error', 'message' => 'Error assigning machine allocation'];
-                                $success = false;
-                            }
-                        }
                     }
                 }
+                return $allocation_details;
             }
-            return $allocation_details;
         } else {
             redirect(base_url(), 'refresh');
         }
@@ -1526,24 +5336,31 @@ class  Work_Model extends CI_Model
     public function Previous_Allocation($CompanyCode, $LocationCode, $Login_User, $Current_Date, $Shift, $Type)
     {
 
-        $allocation_details = [];
+        if ($LocationCode == 'PRECOT - A') {
 
-        try {
-            $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Shift'";
-            $query1 = $this->db->query($sql1);
-            $shift_Data = $query1->num_rows();
 
-            if ($shift_Data == 1) {
-                $Shift_Row = $query1->result();
-                $Shift_Pounch_Start = $Shift_Row[0]->StartIN;
-                $Shift_Pounch_End = $Shift_Row[0]->EndIN;
+            $allocation_details = [];
 
-                $Shift_Date_Convert = $Current_Date;
-                $Shift_Date_Conversion = ($Shift_Row[0]->StartIN_Days == 1 && $Shift_Row[0]->EndIN_Days == 1)
-                    ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
-                    : $Shift_Date_Convert;
+            try {
 
-                $sql2 = "SELECT DISTINCT
+                $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Shift'";
+                $query1 = $this->db->query($sql1);
+                $shift_Data = $query1->num_rows();
+
+
+
+                if ($shift_Data == 1) {
+
+                    $Shift_Row = $query1->result();
+                    $Shift_Pounch_Start = $Shift_Row[0]->StartIN;
+                    $Shift_Pounch_End = $Shift_Row[0]->EndIN;
+
+                    $Shift_Date_Convert = $Current_Date;
+                    $Shift_Date_Conversion = ($Shift_Row[0]->StartIN_Days == 1 && $Shift_Row[0]->EndIN_Days == 1)
+                        ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
+                        : $Shift_Date_Convert;
+
+                    $sql2 = "SELECT DISTINCT
                         Time.MachineID, Emp.FirstName, Emp.Wages, Emp.WorkArea, Emp.JobCardNo, Emp.DeptName, Emp.SubSection_Name
                         FROM UserDetails_Det Log
                         INNER JOIN Employee_Mst Emp ON Log.Lcode = Emp.LocCode
@@ -1551,34 +5368,35 @@ class  Work_Model extends CI_Model
                         WHERE Log.UserID = '$Login_User'
                         AND CONVERT(DATE, Time.TimeIN) = '$Shift_Date_Conversion'
                         AND Time.TimeIN BETWEEN '$Shift_Date_Conversion $Shift_Pounch_Start' AND '$Shift_Date_Conversion $Shift_Pounch_End'
-                        AND Emp.CatName != 'STAFF'
+                        AND Emp.CatName = 'WORKER'
                         AND Time.CompCode = '$CompanyCode'
                         AND Time.LocCode = '$LocationCode'
                         AND Emp.WorkArea IS NOT NULL
                         AND Emp.IsActive = 'Yes'";
 
-                $query2 = $this->db->query($sql2);
-                $log_Data = $query2->result();
 
-                $Pervious_Date = date('Y-m-d', strtotime($Current_Date . ' -1 days'));
+                    $query2 = $this->db->query($sql2);
+                    $log_Data = $query2->result();
 
-                $sql3 = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Date = '$Pervious_Date' AND Shift = '$Shift' AND Assign_Status = '1' AND Work_Status = '1' AND Closing_Status = '1'";
-                $query3 = $this->db->query($sql3);
-                $Previous_Day_Employee_List = $query3->result();
+                    $Pervious_Date = date('Y-m-d', strtotime($Current_Date . ' -1 days'));
 
-                if (!empty($log_Data)) {
-                    foreach ($log_Data as $Present_Employee_List) {
-                        if (isset($Present_Employee_List->MachineID)) {
-                            $Present_Day_Employee = $Present_Employee_List->MachineID;
+                    $sql3 = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Date = '$Pervious_Date' AND Shift = '$Shift' AND Assign_Status = '1' AND Work_Status = '1' AND Closing_Status = '1'";
+                    $query3 = $this->db->query($sql3);
+                    $Previous_Day_Employee_List = $query3->result();
 
-                            foreach ($Previous_Day_Employee_List as $Previous_Employee_List) {
-                                $Previous_Day_Employee = $Previous_Employee_List->EmpNo;
+                    if (!empty($log_Data)) {
+                        foreach ($log_Data as $Present_Employee_List) {
+                            if (isset($Present_Employee_List->MachineID)) {
+                                $Present_Day_Employee = $Present_Employee_List->MachineID;
 
-                                if ($Present_Day_Employee == $Previous_Day_Employee) {
-                                    $Delete = "DELETE FROM Web_Employee_Work_Allocation_Mst WHERE Date = '$Current_Date' AND Shift = '$Shift' AND EmpNo = '$Present_Day_Employee' AND Assign_Status = '0'";
-                                    $Query = $this->db->query($Delete);
+                                foreach ($Previous_Day_Employee_List as $Previous_Employee_List) {
+                                    $Previous_Day_Employee = $Previous_Employee_List->EmpNo;
 
-                                    $checkDuplicateMachine = "SELECT * FROM Web_Employee_Work_Allocation_Mst
+                                    if ($Present_Day_Employee == $Previous_Day_Employee) {
+                                        $Delete = "DELETE FROM Web_Employee_Work_Allocation_Mst WHERE Date = '$Current_Date' AND Shift = '$Shift' AND EmpNo = '$Present_Day_Employee' AND Assign_Status = '0'";
+                                        $Query = $this->db->query($Delete);
+
+                                        $checkDuplicateMachine = "SELECT * FROM Web_Employee_Work_Allocation_Mst
                                                           WHERE Date = '$Current_Date'
                                                           AND Shift = '$Shift'
                                                           AND EmpNo = '{$Previous_Employee_List->EmpNo}'
@@ -1586,72 +5404,347 @@ class  Work_Model extends CI_Model
                                                           AND Assign_Status = '1'";
 
 
-                                    $duplicateQuery = $this->db->query($checkDuplicateMachine);
-                                    $duplicateResult = $duplicateQuery->num_rows();
+                                        $duplicateQuery = $this->db->query($checkDuplicateMachine);
+                                        $duplicateResult = $duplicateQuery->num_rows();
 
-                                    if ($duplicateResult == 0) {
+                                        if ($duplicateResult == 0) {
 
-                                        $Current_Date_Converstion_Work_Allocation = [
-                                            'Ccode'            => $CompanyCode,
-                                            'Lcode'            => $LocationCode,
-                                            'Wages'            => $Previous_Employee_List->Wages,
-                                            'Department'       => $Previous_Employee_List->Department,
-                                            'Sub_Department'       => $Previous_Employee_List->Sub_Department,
-                                            'Sub_Section' => $Previous_Employee_List->Sub_Section,
-                                            'WorkArea'         => $Previous_Employee_List->WorkArea,
-                                            'Job_Card_No'      => $Previous_Employee_List->Job_Card_No,
-                                            'Date'             => $Current_Date,
-                                            'Screen_Type' => 'Previous-Btn-Clicked',
-                                            'Shift'            => $Shift,
-                                            'EmpNo'            => $Previous_Employee_List->EmpNo,
-                                            'FirstName'        => $Previous_Employee_List->FirstName,
-                                            'ExistingCode'     => $Previous_Employee_List->ExistingCode,
-                                            'Type'             => $Previous_Employee_List->Type,
-                                            'Work_Type'        => $Previous_Employee_List->Work_Type,
-                                            'Status_Updated'        => $Previous_Employee_List->Work_Type,
-                                            'Description'      => $Previous_Employee_List->Description,
-                                            'Machine_Name'     => $Previous_Employee_List->Machine_Name,
-                                            'Machine_Model'    => $Previous_Employee_List->Machine_Model,
-                                            'Machine_Id'       => $Previous_Employee_List->Machine_Id,
-                                            'Frame'            => $Previous_Employee_List->Frame,
-                                            'FrameType'        => $Previous_Employee_List->FrameType,
-                                            'Work_Status'      => $Previous_Employee_List->Work_Status,
-                                            'Assign_Status'    => $Previous_Employee_List->Assign_Status,
-                                            'IsWork'           => $Previous_Employee_List->IsWork,
-                                            'Edit_Reason'      => '',
-                                            'Closing_Status'   => '0',
-                                            'Work_Start'       => $Previous_Employee_List->Work_Start,
-                                            'Work_End'         => $Previous_Employee_List->Work_End,
-                                            'Work_Duration'    => $Previous_Employee_List->Work_Duration,
-                                            'Machine_EB_No'    => '',
-                                            'Remarks'          => $Previous_Employee_List->Remarks,
-                                            'Created_By'       => $Login_User,
-                                            'Created_Time'     => date('Y-m-d H:i:s'),
-                                            'Updated_By'       => '-',
-                                            'Updated_Time'     => '-'
-                                        ];
+                                            $Current_Date_Converstion_Work_Allocation = [
+                                                'Ccode'            => $CompanyCode,
+                                                'Lcode'            => $LocationCode,
+                                                'Wages'            => $Previous_Employee_List->Wages,
+                                                'Department'       => $Previous_Employee_List->Department,
+                                                'Sub_Department'       => $Previous_Employee_List->Sub_Department,
+                                                'Sub_Section' => $Previous_Employee_List->Sub_Section,
+                                                'WorkArea'         => $Previous_Employee_List->WorkArea,
+                                                'Job_Card_No'      => $Previous_Employee_List->Job_Card_No,
+                                                'Date'             => $Current_Date,
+                                                'Screen_Type' => 'Previous-Btn-Clicked',
+                                                'Shift'            => $Shift,
+                                                'EmpNo'            => $Previous_Employee_List->EmpNo,
+                                                'FirstName'        => $Previous_Employee_List->FirstName,
+                                                'ExistingCode'     => $Previous_Employee_List->ExistingCode,
+                                                'Type'             => $Previous_Employee_List->Type,
+                                                'Work_Type'        => $Previous_Employee_List->Work_Type,
+                                                'Status_Updated'        => $Previous_Employee_List->Work_Type,
+                                                'Description'      => $Previous_Employee_List->Description,
+                                                'Machine_Name'     => $Previous_Employee_List->Machine_Name,
+                                                'Machine_Model'    => $Previous_Employee_List->Machine_Model,
+                                                'Machine_Id'       => $Previous_Employee_List->Machine_Id,
+                                                'Frame'            => $Previous_Employee_List->Frame,
+                                                'FrameType'        => $Previous_Employee_List->FrameType,
+                                                'Work_Status'      => $Previous_Employee_List->Work_Status,
+                                                'Assign_Status'    => $Previous_Employee_List->Assign_Status,
+                                                'IsWork'           => $Previous_Employee_List->IsWork,
+                                                'Edit_Reason'      => '',
+                                                'Closing_Status'   => '0',
+                                                'Work_Start'       => $Previous_Employee_List->Work_Start,
+                                                'Work_End'         => $Previous_Employee_List->Work_End,
+                                                'Work_Duration'    => $Previous_Employee_List->Work_Duration,
+                                                'Machine_EB_No'    => '',
+                                                'Remarks'          => $Previous_Employee_List->Remarks,
+                                                'Created_By'       => $Login_User,
+                                                'Created_Time'     => date('Y-m-d H:i:s'),
+                                                'Updated_By'       => '-',
+                                                'Updated_Time'     => '-'
+                                            ];
 
-                                        if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Current_Date_Converstion_Work_Allocation)) {
-                                            $allocation_details[] = ['status' => 'success', 'message' => 'Previous Day Work Assigned successfully'];
-                                        } else {
-                                            $allocation_details[] = ['status' => 'error', 'message' => 'Already Previous Day Work Assigned Made No Changes'];
+                                            if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Current_Date_Converstion_Work_Allocation)) {
+                                                $allocation_details[] = ['status' => 'success', 'message' => 'Previous Day Work Assigned successfully'];
+                                            } else {
+                                                $allocation_details[] = ['status' => 'error', 'message' => 'Already Previous Day Work Assigned Made No Changes'];
+                                            }
+                                            // } else {
+                                            //     $allocation_details[] = ['status' => 'error', 'message' => 'Already Previous Day Work Assigned Made No Changes'];
                                         }
-                                        // } else {
-                                        //     $allocation_details[] = ['status' => 'error', 'message' => 'Already Previous Day Work Assigned Made No Changes'];
                                     }
                                 }
+                            } else {
+                                continue;
                             }
-                        } else {
-                            continue;
                         }
                     }
                 }
+            } catch (Exception $e) {
+                $allocation_details[] = ['status' => 'error', 'message' => 'An error occurred: ' . $e->getMessage()];
             }
-        } catch (Exception $e) {
-            $allocation_details[] = ['status' => 'error', 'message' => 'An error occurred: ' . $e->getMessage()];
-        }
 
-        return $allocation_details;
+            return $allocation_details;
+
+
+        } else if ($LocationCode == 'PRECOT - C' || $LocationCode == 'PRECOT - D') {
+
+
+            $allocation_details = [];
+
+            try {
+
+                $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Shift'";
+                $query1 = $this->db->query($sql1);
+                $shift_Data = $query1->num_rows();
+
+
+
+                if ($shift_Data == 1) {
+
+                    $Shift_Row = $query1->result();
+                    $Shift_Pounch_Start = $Shift_Row[0]->StartIN;
+                    $Shift_Pounch_End = $Shift_Row[0]->EndIN;
+
+                    $Shift_Date_Convert = $Current_Date;
+                    $Shift_Date_Conversion = ($Shift_Row[0]->StartIN_Days == 1 && $Shift_Row[0]->EndIN_Days == 1)
+                        ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
+                        : $Shift_Date_Convert;
+
+                    $sql2 = "SELECT DISTINCT
+                        Time.MachineID, Emp.FirstName, Emp.Wages, Emp.WorkArea, Emp.JobCardNo, Emp.DeptName, Emp.SubSection_Name
+                        FROM UserDetails_Det Log
+                        INNER JOIN Employee_Mst Emp ON Log.Lcode = Emp.LocCode
+                        INNER JOIN LogTime_IN Time ON Time.MachineID = Emp.MachineID
+                        WHERE Log.UserID = '$Login_User'
+                        AND CONVERT(DATE, Time.TimeIN) = '$Shift_Date_Conversion'
+                        AND Time.TimeIN BETWEEN '$Shift_Date_Conversion $Shift_Pounch_Start' AND '$Shift_Date_Conversion $Shift_Pounch_End'
+                        AND Emp.CatName = 'WORKER'
+                        AND Time.CompCode = '$CompanyCode'
+                        AND Time.LocCode = '$LocationCode'
+                        AND Emp.WorkArea IS NOT NULL
+                        AND Emp.IsActive = 'Yes'";
+
+
+                    $query2 = $this->db->query($sql2);
+                    $log_Data = $query2->result();
+
+                    $Pervious_Date = date('Y-m-d', strtotime($Current_Date . ' -1 days'));
+
+                    $sql3 = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Date = '$Pervious_Date' AND Shift = '$Shift' AND Assign_Status = '1' AND Work_Status = '1' AND Closing_Status = '1'";
+                    $query3 = $this->db->query($sql3);
+                    $Previous_Day_Employee_List = $query3->result();
+
+                    if (!empty($log_Data)) {
+                        foreach ($log_Data as $Present_Employee_List) {
+                            if (isset($Present_Employee_List->MachineID)) {
+                                $Present_Day_Employee = $Present_Employee_List->MachineID;
+
+                                foreach ($Previous_Day_Employee_List as $Previous_Employee_List) {
+                                    $Previous_Day_Employee = $Previous_Employee_List->EmpNo;
+
+                                    if ($Present_Day_Employee == $Previous_Day_Employee) {
+
+                                        $Delete = "DELETE FROM Web_Employee_Work_Allocation_Mst WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND Date = '$Current_Date' AND Shift = '$Shift' AND EmpNo = '$Present_Day_Employee' AND Assign_Status = '0'";
+                                        $Query = $this->db->query($Delete);
+
+                                        $checkDuplicateMachine = "SELECT * FROM Web_Employee_Work_Allocation_Mst
+                                                          WHERE Ccode = '$CompanyCode'
+                                                          AND Lcode = '$LocationCode'
+                                                          AND Date = '$Current_Date'
+                                                          AND Shift = '$Shift'
+                                                          AND EmpNo = '{$Previous_Employee_List->EmpNo}'
+                                                          AND Work_Status = '1'
+                                                          AND Assign_Status = '1'";
+
+
+                                        $duplicateQuery = $this->db->query($checkDuplicateMachine);
+                                        $duplicateResult = $duplicateQuery->num_rows();
+
+                                        if ($duplicateResult == 0) {
+
+                                            $Current_Date_Converstion_Work_Allocation = [
+                                                'Ccode'            => $CompanyCode,
+                                                'Lcode'            => $LocationCode,
+                                                'Wages'            => $Previous_Employee_List->Wages,
+                                                'Department'       => $Previous_Employee_List->Department,
+                                                'Sub_Department'       => $Previous_Employee_List->Sub_Department,
+                                                'Sub_Section' => $Previous_Employee_List->Sub_Section,
+                                                'WorkArea'         => $Previous_Employee_List->WorkArea,
+                                                'Job_Card_No'      => $Previous_Employee_List->Job_Card_No,
+                                                'Date'             => $Current_Date,
+                                                'Screen_Type' => 'Previous-Btn-Clicked',
+                                                'Shift'            => $Shift,
+                                                'EmpNo'            => $Previous_Employee_List->EmpNo,
+                                                'FirstName'        => $Previous_Employee_List->FirstName,
+                                                'ExistingCode'     => $Previous_Employee_List->ExistingCode,
+                                                'Type'             => $Previous_Employee_List->Type,
+                                                'Work_Type'        => $Previous_Employee_List->Work_Type,
+                                                'Status_Updated'        => $Previous_Employee_List->Work_Type,
+                                                'Description'      => $Previous_Employee_List->Description,
+                                                'Machine_Name'     => $Previous_Employee_List->Machine_Name,
+                                                'Machine_Model'    => $Previous_Employee_List->Machine_Model,
+                                                'Machine_Id'       => $Previous_Employee_List->Machine_Id,
+                                                'Frame'            => $Previous_Employee_List->Frame,
+                                                'FrameType'        => $Previous_Employee_List->FrameType,
+                                                'Work_Status'      => $Previous_Employee_List->Work_Status,
+                                                'Assign_Status'    => $Previous_Employee_List->Assign_Status,
+                                                'IsWork'           => $Previous_Employee_List->IsWork,
+                                                'Edit_Reason'      => '',
+                                                'Closing_Status'   => '0',
+                                                'Work_Start'       => $Previous_Employee_List->Work_Start,
+                                                'Work_End'         => $Previous_Employee_List->Work_End,
+                                                'Work_Duration'    => $Previous_Employee_List->Work_Duration,
+                                                'Machine_EB_No'    => '',
+                                                'Remarks'          => $Previous_Employee_List->Remarks,
+                                                'Created_By'       => $Login_User,
+                                                'Created_Time'     => date('Y-m-d H:i:s'),
+                                                'Updated_By'       => '-',
+                                                'Updated_Time'     => '-'
+                                            ];
+
+                                            if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Current_Date_Converstion_Work_Allocation)) {
+                                                $allocation_details[] = ['status' => 'success', 'message' => 'Previous Day Work Assigned successfully'];
+                                            } else {
+                                                $allocation_details[] = ['status' => 'error', 'message' => 'Already Previous Day Work Assigned Made No Changes'];
+                                            }
+                                            // } else {
+                                            //     $allocation_details[] = ['status' => 'error', 'message' => 'Already Previous Day Work Assigned Made No Changes'];
+                                        }
+                                    }
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception $e) {
+                $allocation_details[] = ['status' => 'error', 'message' => 'An error occurred: ' . $e->getMessage()];
+            }
+
+            return $allocation_details;
+        } else if ($LocationCode == 'PRECOT - M') {
+
+
+
+            $allocation_details = [];
+
+            try {
+
+                $sql1 = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Shift'";
+                $query1 = $this->db->query($sql1);
+                $shift_Data = $query1->num_rows();
+
+
+
+                if ($shift_Data == 1) {
+
+                    $Shift_Row = $query1->result();
+                    $Shift_Pounch_Start = $Shift_Row[0]->StartIN;
+                    $Shift_Pounch_End = $Shift_Row[0]->EndIN;
+
+                    $Shift_Date_Convert = $Current_Date;
+                    $Shift_Date_Conversion = ($Shift_Row[0]->StartIN_Days == 1 && $Shift_Row[0]->EndIN_Days == 1)
+                        ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
+                        : $Shift_Date_Convert;
+
+                    $sql2 = "SELECT DISTINCT
+                        Time.MachineID, Emp.FirstName, Emp.Wages, Emp.WorkArea, Emp.JobCardNo, Emp.DeptName, Emp.SubSection_Name
+                        FROM UserDetails_Det Log
+                        INNER JOIN Employee_Mst Emp ON Log.Lcode = Emp.LocCode
+                        INNER JOIN LogTime_IN Time ON Time.MachineID = Emp.MachineID
+                        WHERE Log.UserID = '$Login_User'
+                        AND CONVERT(DATE, Time.TimeIN) = '$Shift_Date_Conversion'
+                        AND Time.TimeIN BETWEEN '$Shift_Date_Conversion $Shift_Pounch_Start' AND '$Shift_Date_Conversion $Shift_Pounch_End'
+                        AND Emp.CatName = 'WORKER'
+                        AND Time.CompCode = '$CompanyCode'
+                        AND Time.LocCode = '$LocationCode'
+                        AND Emp.WorkArea IS NOT NULL
+                        AND Emp.IsActive = 'Yes'";
+
+
+                    $query2 = $this->db->query($sql2);
+                    $log_Data = $query2->result();
+
+                    $Pervious_Date = date('Y-m-d', strtotime($Current_Date . ' -1 days'));
+
+                    $sql3 = "SELECT * FROM Web_Employee_Work_Allocation_Mst WHERE Date = '$Pervious_Date' AND Shift = '$Shift' AND Assign_Status = '1' AND Work_Status = '1' AND Closing_Status = '1'";
+                    $query3 = $this->db->query($sql3);
+                    $Previous_Day_Employee_List = $query3->result();
+
+                    if (!empty($log_Data)) {
+                        foreach ($log_Data as $Present_Employee_List) {
+                            if (isset($Present_Employee_List->MachineID)) {
+                                $Present_Day_Employee = $Present_Employee_List->MachineID;
+
+                                foreach ($Previous_Day_Employee_List as $Previous_Employee_List) {
+                                    $Previous_Day_Employee = $Previous_Employee_List->EmpNo;
+
+                                    if ($Present_Day_Employee == $Previous_Day_Employee) {
+                                        $Delete = "DELETE FROM Web_Employee_Work_Allocation_Mst WHERE Date = '$Current_Date' AND Shift = '$Shift' AND EmpNo = '$Present_Day_Employee' AND Assign_Status = '0'";
+                                        $Query = $this->db->query($Delete);
+
+                                        $checkDuplicateMachine = "SELECT * FROM Web_Employee_Work_Allocation_Mst
+                                                          WHERE Date = '$Current_Date'
+                                                          AND Shift = '$Shift'
+                                                          AND EmpNo = '{$Previous_Employee_List->EmpNo}'
+                                                          AND Work_Status = '1'
+                                                          AND Assign_Status = '1'";
+
+
+                                        $duplicateQuery = $this->db->query($checkDuplicateMachine);
+                                        $duplicateResult = $duplicateQuery->num_rows();
+
+                                        if ($duplicateResult == 0) {
+
+                                            $Current_Date_Converstion_Work_Allocation = [
+                                                'Ccode'            => $CompanyCode,
+                                                'Lcode'            => $LocationCode,
+                                                'Wages'            => $Previous_Employee_List->Wages,
+                                                'Department'       => $Previous_Employee_List->Department,
+                                                'Sub_Department'       => $Previous_Employee_List->Sub_Department,
+                                                'Sub_Section' => $Previous_Employee_List->Sub_Section,
+                                                'WorkArea'         => $Previous_Employee_List->WorkArea,
+                                                'Job_Card_No'      => $Previous_Employee_List->Job_Card_No,
+                                                'Date'             => $Current_Date,
+                                                'Screen_Type' => 'Previous-Btn-Clicked',
+                                                'Shift'            => $Shift,
+                                                'EmpNo'            => $Previous_Employee_List->EmpNo,
+                                                'FirstName'        => $Previous_Employee_List->FirstName,
+                                                'ExistingCode'     => $Previous_Employee_List->ExistingCode,
+                                                'Type'             => $Previous_Employee_List->Type,
+                                                'Work_Type'        => $Previous_Employee_List->Work_Type,
+                                                'Status_Updated'        => $Previous_Employee_List->Work_Type,
+                                                'Description'      => $Previous_Employee_List->Description,
+                                                'Machine_Name'     => $Previous_Employee_List->Machine_Name,
+                                                'Machine_Model'    => $Previous_Employee_List->Machine_Model,
+                                                'Machine_Id'       => $Previous_Employee_List->Machine_Id,
+                                                'Frame'            => $Previous_Employee_List->Frame,
+                                                'FrameType'        => $Previous_Employee_List->FrameType,
+                                                'Work_Status'      => $Previous_Employee_List->Work_Status,
+                                                'Assign_Status'    => $Previous_Employee_List->Assign_Status,
+                                                'IsWork'           => $Previous_Employee_List->IsWork,
+                                                'Edit_Reason'      => '',
+                                                'Closing_Status'   => '0',
+                                                'Work_Start'       => $Previous_Employee_List->Work_Start,
+                                                'Work_End'         => $Previous_Employee_List->Work_End,
+                                                'Work_Duration'    => $Previous_Employee_List->Work_Duration,
+                                                'Machine_EB_No'    => '',
+                                                'Remarks'          => $Previous_Employee_List->Remarks,
+                                                'Created_By'       => $Login_User,
+                                                'Created_Time'     => date('Y-m-d H:i:s'),
+                                                'Updated_By'       => '-',
+                                                'Updated_Time'     => '-'
+                                            ];
+
+                                            if ($this->db->insert('Web_Employee_Work_Allocation_Mst', $Current_Date_Converstion_Work_Allocation)) {
+                                                $allocation_details[] = ['status' => 'success', 'message' => 'Previous Day Work Assigned successfully'];
+                                            } else {
+                                                $allocation_details[] = ['status' => 'error', 'message' => 'Already Previous Day Work Assigned Made No Changes'];
+                                            }
+                                            // } else {
+                                            //     $allocation_details[] = ['status' => 'error', 'message' => 'Already Previous Day Work Assigned Made No Changes'];
+                                        }
+                                    }
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception $e) {
+                $allocation_details[] = ['status' => 'error', 'message' => 'An error occurred: ' . $e->getMessage()];
+            }
+
+            return $allocation_details;
+        }
     }
 
 
@@ -1969,7 +6062,7 @@ class  Work_Model extends CI_Model
                 WHERE Log.UserID = '$Login_User'
                 -- AND CONVERT(DATE, Time.TimeIN) = '$From_Shift_Date_Convert'
                 AND Time.TimeIN BETWEEN '$From_Shift_Date_Convert $Shift_Pounch_Start' AND '$To_Shift_Date_Convert $Shift_Pounch_End'
-                AND Emp.CatName != 'STAFF'
+                AND Emp.CatName = 'WORKER'
                 AND Time.CompCode = '$CompanyCode'
                 AND Time.LocCode = '$LocationCode'
                 AND Emp.WorkArea IS NOT NULL
@@ -2216,7 +6309,7 @@ WHERE Login.UserID = '$Login_User'
                     WHERE Log.UserID = '$Login_User'
                     AND CONVERT(DATE, Time.TimeIN) = '$Shift_Date_Convert'
                     AND Time.TimeIN BETWEEN '$From_Shift_Date_Convert $Shift_Pounch_Start' AND '$To_Shift_Date_Convert $Shift_Pounch_End'
-                    AND Emp.CatName != 'STAFF'
+                    AND Emp.CatName = 'WORKER'
                     AND Time.CompCode = '$CompanyCode'
                     AND Time.LocCode = '$LocationCode'
                     AND Emp.SubSection_Name = '$Sub_Section'
@@ -2310,7 +6403,14 @@ WHERE Login.UserID = '$Login_User'
                          AND W.Work_Type = 'NoWork'
                     THEN W.EmpNo
                     ELSE NULL
-                  END) AS No_Work_Count
+                  END) AS No_Work_Count,
+    COUNT(DISTINCT CASE
+                    WHEN W.Work_Status = '1'
+                    AND W.Working_Type = 'OT'
+                    AND W.Work_Type != 'NoWork'
+                    THEN W.EmpNo
+                    ELSE NULL
+                    END) AS OT_Employee
 
 FROM
     Web_Employee_Work_Allocation_Mst W
@@ -2327,8 +6427,6 @@ WHERE
 
         $query = $this->db->query($Sql);
         $Employee_Count_Details = $query->result();
-
-        // print_r($sql);exit;
 
         if ($query->num_rows() > 0) {
 
@@ -2365,6 +6463,7 @@ WHERE
            AND Work.Work_Status = '1'
            AND Work.Assign_Status = '1'
            AND Work.Closing_Status = '0'
+           AND Work.Shift = '$Shift'
            AND Work.Date = '$Date') AS Allocated_Count,
 
         ((SELECT COUNT(DISTINCT M.Machine_Id)
@@ -2388,6 +6487,7 @@ WHERE
             AND Work.Work_Status = '1'
             AND Work.Assign_Status = '1'
             AND Work.Closing_Status = '0'
+            AND Work.Shift = '$Shift'
             AND Work.Date = '$Date')) AS Unallocated_Count";
 
         $query1 = $this->db->query($Sql_Get_Counts);
@@ -2418,8 +6518,8 @@ WHERE
                 AND Work.Assign_Status = '1'
                 AND Work.Closing_Status = '0'
                 AND Work.Date = '$Date'
-          )
-    ";
+                AND Work.Shift = '$Shift'
+          )";
 
         $query2 = $this->db->query($Sql_Get_Unallocated_Machines);
         $unallocated_machines = $query2->result();
@@ -2434,4 +6534,183 @@ WHERE
             return 0;
         }
     }
+
+
+public function Get_Un_Allocated_List($CompanyCode, $LocationCode, $Login_User, $Shift, $Date)
+{
+    $Sql = "SELECT Work.Type AS Type, Work.* FROM Web_Employee_Work_Allocation_Mst Work
+            INNER JOIN UserDetails_Det Login ON Login.Lcode = Work.Lcode
+                AND Login.Ccode = Work.Ccode
+                AND Login.Name = Work.Sub_Department
+            WHERE Login.UserID = '$Login_User'
+                AND Work.Lcode = '$LocationCode'
+                AND Work.Ccode = '$CompanyCode'
+                AND Work.Date = '$Date'
+                AND Work.Shift = '$Shift'
+                AND Work.WorK_Status = '1'
+                AND Work.Assign_Status = '0'
+                AND Work.Work_Type != 'NoWork'";
+
+    $Query = $this->db->query($Sql);
+
+    if ($Query->num_rows() > 0) {
+        return $Query->result();
+    } else {
+        return 0;
+    }
+}
+
+
+public function Work_Allocated_List($CompanyCode, $LocationCode, $Login_User, $Shift, $Date)
+{
+    $Sql = "SELECT Work.Type AS Type, Work.* FROM Web_Employee_Work_Allocation_Mst Work
+            INNER JOIN UserDetails_Det Login ON Login.Lcode = Work.Lcode
+                AND Login.Ccode = Work.Ccode
+                AND Login.Name = Work.Sub_Department
+            WHERE Login.UserID = '$Login_User'
+                AND Work.Lcode = '$LocationCode'
+                AND Work.Ccode = '$CompanyCode'
+                AND Work.Date = '$Date'
+                AND Work.Shift = '$Shift'
+                AND Work.WorK_Status = '1'
+                AND Work.Assign_Status = '1'
+                AND Work.Work_Type != 'NoWork'";
+
+    $Query = $this->db->query($Sql);
+
+    if ($Query->num_rows() > 0) {
+        return $Query->result();
+    } else {
+        return 0;
+    }
+}
+
+
+public function No_Work_Allocated_List($CompanyCode, $LocationCode, $Login_User, $Shift, $Date)
+{
+    $Sql = "SELECT Work.Type AS Type, Work.* FROM Web_Employee_Work_Allocation_Mst Work
+            INNER JOIN UserDetails_Det Login ON Login.Lcode = Work.Lcode
+                AND Login.Ccode = Work.Ccode
+                AND Login.Name = Work.Sub_Department
+            WHERE Login.UserID = '$Login_User'
+                AND Work.Lcode = '$LocationCode'
+                AND Work.Ccode = '$CompanyCode'
+                AND Work.Date = '$Date'
+                AND Work.Shift = '$Shift'
+                AND Work.WorK_Status = '1'
+                AND Work.Assign_Status = '0'
+                AND Work.Work_Type = 'NoWork'";
+
+    $Query = $this->db->query($Sql);
+
+    if ($Query->num_rows() > 0) {
+        return $Query->result();
+    } else {
+        return 0;
+    }
+}
+
+
+public function Partial_Closed_List($CompanyCode, $LocationCode, $Login_User, $Shift, $Date)
+{
+    $Sql = "SELECT Work.Type AS Type, Work.* FROM Web_Employee_Work_Allocation_Mst Work
+            INNER JOIN UserDetails_Det Login ON Login.Lcode = Work.Lcode
+                AND Login.Ccode = Work.Ccode
+                AND Login.Name = Work.Sub_Department
+            WHERE Login.UserID = '$Login_User'
+                AND Work.Lcode = '$LocationCode'
+                AND Work.Ccode = '$CompanyCode'
+                AND Work.Date = '$Date'
+                AND Work.Shift = '$Shift'
+                AND Work.WorK_Status = '1'
+                AND Work.Assign_Status = '1'
+                AND Work.Closing_Status = '1'
+                AND Work.Work_Type != 'NoWork'";
+
+    $Query = $this->db->query($Sql);
+
+    if ($Query->num_rows() > 0) {
+        return $Query->result();
+    } else {
+        return 0;
+    }
+}
+
+
+public function Shift_Punched_Employee($CompanyCode, $LocationCode, $Login_User, $Shift, $Date)
+{
+    $Sql = "SELECT Work.Type AS Type, Work.* FROM Web_Employee_Work_Allocation_Mst Work
+            INNER JOIN UserDetails_Det Login ON Login.Lcode = Work.Lcode
+                AND Login.Ccode = Work.Ccode
+                AND Login.Name = Work.Sub_Department
+            WHERE Login.UserID = '$Login_User'
+                AND Work.Lcode = '$LocationCode'
+                AND Work.Ccode = '$CompanyCode'
+                AND Work.Date = '$Date'
+                AND Work.Shift = '$Shift'
+                AND Work.WorK_Status = '1'
+                AND Work.Assign_Status = '1'
+                AND Work.Type = 'SHIFT'
+                AND Work.Work_Type != 'NoWork'";
+
+    $Query = $this->db->query($Sql);
+
+    if ($Query->num_rows() > 0) {
+        return $Query->result();
+    } else {
+        return 0;
+    }
+}
+
+
+public function Late_Punched_Employee($CompanyCode, $LocationCode, $Login_User, $Shift, $Date)
+{
+    $Sql = "SELECT Work.Type AS Type, Work.* FROM Web_Employee_Work_Allocation_Mst Work
+            INNER JOIN UserDetails_Det Login ON Login.Lcode = Work.Lcode
+                AND Login.Ccode = Work.Ccode
+                AND Login.Name = Work.Sub_Department
+            WHERE Login.UserID = '$Login_User'
+                AND Work.Lcode = '$LocationCode'
+                AND Work.Ccode = '$CompanyCode'
+                AND Work.Date = '$Date'
+                AND Work.Shift = '$Shift'
+                AND Work.WorK_Status = '1'
+                AND Work.Assign_Status = '1'
+                AND Work.Type = 'LATE'
+                AND Work.Work_Type != 'NoWork'";
+
+    $Query = $this->db->query($Sql);
+
+    if ($Query->num_rows() > 0) {
+        return $Query->result();
+    } else {
+        return 0;
+    }
+}
+
+
+public function OT_Employee($CompanyCode, $LocationCode, $Login_User, $Shift, $Date)
+{
+    $Sql = "SELECT Work.Type AS Type, Work.* FROM Web_Employee_Work_Allocation_Mst Work
+            INNER JOIN UserDetails_Det Login ON Login.Lcode = Work.Lcode
+                AND Login.Ccode = Work.Ccode
+                AND Login.Name = Work.Sub_Department
+            WHERE Login.UserID = '$Login_User'
+                AND Work.Lcode = '$LocationCode'
+                AND Work.Ccode = '$CompanyCode'
+                AND Work.Date = '$Date'
+                AND Work.Shift = '$Shift'
+                AND Work.WorK_Status = '1'
+                AND Work.Working_Type = 'OT'
+                AND Work.Work_Type != 'NoWork'";
+
+    $Query = $this->db->query($Sql);
+
+    if ($Query->num_rows() > 0) {
+        return $Query->result();
+    } else {
+        return 0;
+    }
+}
+
 }

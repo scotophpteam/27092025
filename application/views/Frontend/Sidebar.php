@@ -129,11 +129,13 @@
                                             'Employee Live Punching List' => 'Employee/Punching_List',
                                             'Employee Attendance Report' => 'Employee/Employee_Attendance',
                                             'Employee Manual Attendance' => 'Employee/Attendance_Entry',
+                                            'Employee Punching Details' => 'Employee/Details_Punching_List',
 
-                                            'Employee Shift Closing' => 'Shift_Closing',
                                             'Employee Work Allocation' => 'Work',
-                                            'Late -  Extra Work Allocation' => 'Work/Late_Extra',
+                                            'Late Work Allocation' => 'Work/Late_Extra',
                                             'Employee Partial Closing' => 'Work/Partial_Close',
+                                            'Employee Shift Closing' => 'Shift_Closing',
+                                            
 
                                             'Employee Status' => 'Grade_Master',
                                             'Employee Attendace Grade' => 'Grade_Master/Attendance_Sheet',
@@ -142,6 +144,7 @@
                                             'Late -  Extra Work Allocation Report' => 'Reports/Late_Report',
                                             'Shift Closing Report' => 'Reports/Shift_Closing_Reports',
                                             'NoWork Employee Report' => 'Reports/No_Work_Employee',
+                                            'OT Employee List' => 'Reports/OT_Employee',
 
                                             'Daily Machine Details Upload' => 'SAP/Machine_Work_Details',
 
@@ -170,29 +173,6 @@
     </div>
 </div>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <!-- </div> -->
 
 <!-- js -->
@@ -214,19 +194,6 @@
 <script src="<?php echo base_url('assets/src/plugins/datatables/js/pdfmake.min.js') ?>"></script>
 <script src="<?php echo base_url('assets/src/plugins/datatables/js/vfs_fonts.js') ?>"></script>
 <script src="<?php echo base_url('assets/src/plugins/apexcharts/apexcharts.min.js') ?>"></script>
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 <script>
@@ -268,6 +235,9 @@
             $(this).addClass('active-item');
         });
     });
+
+
+
 </script>
 
 
@@ -282,4 +252,6 @@
     }
 
     ul.submenu li a:hover {}
+
+    
 </style>

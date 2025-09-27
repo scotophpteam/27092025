@@ -143,6 +143,9 @@ class OT extends CI_Controller
         }
     }
 
+
+
+
     public function Extra_Employee_List()
     {
 
@@ -154,11 +157,9 @@ class OT extends CI_Controller
             $Login_User =  $Session['UserName'];
 
             $Date = $this->input->post('Date');
-            $Shift = $this->input->post('Shift');
-            $Type = $this->input->post('Type');
 
-            $this->data['Extra_Employee_List'] = $Extra_Employee_List = $this->OT_Model->Extra_Employee_List($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Type);
-            $this->data['Late_And_Extra_Employee_Count'] = $Late_And_Extra_Employee_Count = $this->OT_Model->Extra_Employee_Count($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+
+            $this->data['Extra_Employee_List'] = $Extra_Employee_List = $this->OT_Model->Extra_Employee_List($CompanyCode, $LocationCode, $Login_User, $Date);
             $this->data['User_Department'] = $User_Department = $this->Work_Model->User_Department($CompanyCode, $LocationCode, $Login_User);
 
             if (isset($Extra_Employee_List)) {
@@ -168,6 +169,8 @@ class OT extends CI_Controller
             redirect(base_url());
         }
     }
+
+
 
     public function Work_Areas()
     {
@@ -317,23 +320,8 @@ class OT extends CI_Controller
 
             $input_data = json_decode($this->input->raw_input_stream, true);
 
-            // print_r($input_data);exit;
 
             $this->data['Work_Allocation'] = $Work_Allocation = $this->Work_Model->Assign($input_data, $CompanyCode, $LocationCode);
-
-
-            foreach ($input_data['Allocations'] as $row) {
-                $Department = $row['Department'];
-                $Date = $row['Date'];
-                $Shift = $row['Shift'];
-                $Work_Area = $row['Work_Area'];
-                $Employee_Id = $row['EmployeeId'];
-                $Frame = $row['Frames'];
-                // $FrameType = $row['FrameType'];
-                $Machine_Id = $row['Machine_Id'];
-                $Job_Card_No = $row['JobCardNo'];
-                $Type = $row['Allocation_Type'];
-            }
 
             echo json_encode(1);
         } else {
@@ -372,41 +360,28 @@ class OT extends CI_Controller
         }
     }
 
-    public function Save()
-    {
+    // public function Save()
+    // {
 
-        $Session = $this->session->userdata('sess_array');
-        if (!empty($Session) && isset($Session['IsOnLogin']) &&  $Session['IsOnLogin'] === TRUE) {
+    //     $Session = $this->session->userdata('sess_array');
+    //     if (!empty($Session) && isset($Session['IsOnLogin']) &&  $Session['IsOnLogin'] === TRUE) {
 
-            $CompanyCode =  $Session['Ccode'];
-            $LocationCode =  $Session['Lcode'];
-            $Login_User =  $Session['UserName'];
+    //         $CompanyCode =  $Session['Ccode'];
+    //         $LocationCode =  $Session['Lcode'];
+    //         $Login_User =  $Session['UserName'];
 
-            $input_data = json_decode($this->input->raw_input_stream, true);
+    //         $input_data = json_decode($this->input->raw_input_stream, true);
 
-            // print_r($input_data);exit;
+    //         // print_r($input_data);exit;
 
-            $this->data['Work_Allocation'] = $Work_Allocation = $this->OT_Model->Assign($input_data, $CompanyCode, $LocationCode);
+    //         $this->data['Work_Allocation'] = $Work_Allocation = $this->OT_Model->Assign($input_data, $CompanyCode, $LocationCode);
 
+    //         echo json_encode(1);
 
-            foreach ($input_data['Allocations'] as $row) {
-                $Department = $row['Department'];
-                $Date = $row['Date'];
-                $Shift = $row['Shift'];
-                $Work_Area = $row['Work_Area'];
-                $Employee_Id = $row['EmployeeId'];
-                $Frame = $row['Frames'];
-                // $FrameType = $row['FrameType'];
-                $Machine_Id = $row['Machine_Id'];
-                $Job_Card_No = $row['JobCardNo'];
-                $Type = $row['Allocation_Type'];
-            }
-
-            echo json_encode(1);
-        } else {
-            redirect(base_url());
-        }
-    }
+    //     } else {
+    //         redirect(base_url());
+    //     }
+    // }
 
     public function Edit()
     {
@@ -420,20 +395,8 @@ class OT extends CI_Controller
 
             $input_data = json_decode($this->input->raw_input_stream, true);
 
+            
             $this->data['Edit'] = $Work_Allocation = $this->OT_Model->Edit($input_data, $CompanyCode, $LocationCode);
-
-
-            foreach ($input_data['Allocations'] as $row) {
-                $Department = $row['Department'];
-                $Date = $row['Date'];
-                $Shift = $row['Shift'];
-                $Work_Area = $row['Work_Area'];
-                $Employee_Id = $row['EmployeeId'];
-                $Frame = $row['Frames'];
-                $Machine_Id = $row['Machine_Id'];
-                // $Job_Card_No = $row['JobCardNo'] ?: '';
-                $Type = $row['Allocation_Type'];
-            }
 
 
             if (isset($Work_Allocation)) {
@@ -514,7 +477,7 @@ class OT extends CI_Controller
         $Session = $this->session->userdata('sess_array');
         if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
 
-            $this->data['Favicon'] = 'Precot | Extra Hours Entry';
+            $this->data['Favicon'] = 'Precot | OT - Extra Hours Entry';
 
             if ($this->input->method() === 'post') {
 
@@ -557,8 +520,6 @@ class OT extends CI_Controller
 
             $this->data['Get_OT_Extra_Hours_List_Employee'] = $Get_OT_Extra_Hours_List_Employee = $this->OT_Model->Get_OT_Extra_Hours_List_Employee($CompanyCode, $LocationCode, $Login_User, $Date, $Type);
 
-
-
             echo json_encode($this->data);
         } else {
 
@@ -581,7 +542,69 @@ class OT extends CI_Controller
             $Shift = $this->input->post('Shift');
             $Type = $this->input->post('Type');
 
-            $this->data['OT_Employee_Details'] = $OT_Employee_Details = $this->OT_Model->OT_Employee_Details($CompanyCode, $LocationCode, $Login_User, $Date, $Shift ,$Type);
+            $this->data['OT_Employee_Details'] = $OT_Employee_Details = $this->OT_Model->OT_Employee_Details($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Type);
+
+            echo json_encode($this->data);
+
+        } else {
+
+            redirect(base_url(), 'refresh');
+        }
+    }
+
+
+    public function OT_Details_Entry()
+    {
+
+        $Session = $this->session->userdata('sess_array');
+        if (!empty($Session) && isset($Session['IsOnLogin']) &&  $Session['IsOnLogin'] === TRUE) {
+
+
+            $CompanyCode =  $Session['Ccode'];
+            $LocationCode =  $Session['Lcode'];
+            $Login_User =  $Session['UserName'];
+
+            if ($this->input->post()) {
+
+                $Date = $this->input->post('Date');
+                $Shift = $this->input->post('Shift');
+                $Type = $this->input->post('Type');
+                $Employee_Id = $this->input->post('EmpNo');
+                $Employee_Name = $this->input->post('EmployeeName');
+                $IN_Time = $this->input->post('InTime');
+                $IN_Out = $this->input->post('InOut');
+                $Actual_WHours = $this->input->post('Actual_WHours');
+                $Emaster_UpdatedTime = $this->input->post('UpdatedTime');
+                $Difference = $this->input->post('Difference');
+                $Final_OTHours = $this->input->post('Final_ExtraHours');
+                $Supervisor = $this->input->post('Supervisor');
+
+                $this->data['OT_Details_Entry'] = $OT_Details_Entry = $this->OT_Model->OT_Details_Entry($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Type, $Employee_Id, $Employee_Name, $IN_Time, $IN_Out, $Actual_WHours, $Emaster_UpdatedTime, $Difference, $Final_OTHours, $Supervisor);
+                echo json_encode($this->data);
+            }
+        } else {
+
+            redirect(base_url(), 'refresh');
+        }
+    }
+
+
+    public function No_Work_Employees()
+    {
+
+        $Session = $this->session->userdata('sess_array');
+        if (!empty($Session) && isset($Session['IsOnLogin']) &&  $Session['IsOnLogin'] === TRUE) {
+
+
+            $CompanyCode =  $Session['Ccode'];
+            $LocationCode =  $Session['Lcode'];
+            $Login_User =  $Session['UserName'];
+
+            $Date = $this->input->post('Date');
+            $Shift = $this->input->post('Shift');
+            $Type = $this->input->post('Type');
+
+            $this->data['No_Work_Employees'] = $No_Work_Employees = $this->OT_Model->No_Work_Employees($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Type);
 
 
 
@@ -592,46 +615,38 @@ class OT extends CI_Controller
         }
     }
 
+    public function No_Work_Employee_Update()
+    {
 
-    public function OT_Details_Entry(){
-
-         $Session = $this->session->userdata('sess_array');
+        $Session = $this->session->userdata('sess_array');
         if (!empty($Session) && isset($Session['IsOnLogin']) &&  $Session['IsOnLogin'] === TRUE) {
 
+
+            if($this->input->post()){
 
             $CompanyCode =  $Session['Ccode'];
             $LocationCode =  $Session['Lcode'];
             $Login_User =  $Session['UserName'];
 
-            if($this->input->post()){
-
             $Date = $this->input->post('Date');
             $Shift = $this->input->post('Shift');
             $Type = $this->input->post('Type');
-            $Employee_Id = $this->input->post('EmpNo');
-            $Employee_Name = $this->input->post('EmployeeName');
-            $IN_Time = $this->input->post('InTime');
-            $IN_Out = $this->input->post('InOut');
-            $Actual_WHours = $this->input->post('Actual_WHours');
-            $Emaster_UpdatedTime = $this->input->post('UpdatedTime');
-            $Difference = $this->input->post('Difference');
-            $Final_OTHours = $this->input->post('Final_ExtraHours');
+
+            $Employee_Id = $this->input->post('EmployeeID');
+            $Employee_Name = $this->input->post('Employee_Name');
+            $IN_Time = $this->input->post('IN_Time');
+            $IN_Out = $this->input->post('IN_OUT');
+            $Attendance = $this->input->post('Attendance');
             $Supervisor = $this->input->post('Supervisor');
 
-            $this->data['OT_Details_Entry'] = $OT_Details_Entry = $this->OT_Model->OT_Details_Entry($CompanyCode, $LocationCode, $Login_User, $Date, $Shift ,$Type , $Employee_Id, $Employee_Name, $IN_Time, $IN_Out, $Actual_WHours, $Emaster_UpdatedTime, $Difference, $Final_OTHours, $Supervisor);
+            $this->data['No_Work_Employees_Update'] = $No_Work_Employees_Update = $this->OT_Model->No_Work_Employees_Update($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Type, $Employee_Id, $Employee_Name, $IN_Time, $IN_Out, $Attendance, $Supervisor);
             echo json_encode($this->data);
-                
-            }
 
-            
+            }
 
 
         } else {
-
-            redirect(base_url(), 'refresh');
+            redirect(base_url());
         }
-
-
-
     }
 }

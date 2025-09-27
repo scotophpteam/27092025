@@ -153,6 +153,7 @@
 
                             <button class="button btn-sm btn-success" id="Completed_Punching_List">Punching complete</button>
                             <button class="button btn-sm btn-danger" id="Missed_Punching_List">Missed Punching</button>
+                            <button class="button btn-sm" id="Manual_Attendance_List" style="background-color: orange; color: white;">Manual Attendance</button>
 
 
                             <table class="table table-responsive" id="Employee_Punching_List_Table">
@@ -165,6 +166,7 @@
                                         <th>Day In</th>
                                         <th>Break Out</th>
                                         <th>Break IN</th>
+                                        <th>Day Out</th>
                                         <th>Status</th>
                                     </tr>
                                 </thead>

@@ -16,6 +16,8 @@ class Work extends CI_Controller
         $this->load->model('Home_Model');
         $this->load->model('Work_Model');
         $this->load->model('Late_Extra_Model');
+
+  
     }
 
 
@@ -27,12 +29,15 @@ class Work extends CI_Controller
         if (!empty($Session) && isset($Session['IsOnLogin']) &&  $Session['IsOnLogin'] === TRUE) {
 
             $this->data['Favicon'] = 'Precot | Work Allocation';
-
+            $this->data['Location_Code'] =   $Session['Lcode'];
+            $CompanyCode =   $Session['Ccode'];
+            $UserName =  $Session['UserName'];
 
             $this->load->view('Frontend/Header', $this->data);
             $this->load->view('Frontend/Sidebar');
             $this->load->view('Work/Work_Allocation', $this->data);
             $this->load->view('Frontend/Footer');
+
         } else {
             redirect(base_url(), 'refresh');
         }
@@ -109,10 +114,18 @@ class Work extends CI_Controller
             $Date = $this->input->post('Date');
             $Shift = $this->input->post('Shift');
             $Sub_Section = $this->input->post('Sub_Section');
+            $Type = $this->input->post('Type');
 
 
+
+            $this->data['Location_Code'] =   $Session['Lcode'];
             $this->data['Seperated_Sub_Section'] = $Seperated_Sub_Section = $this->Work_Model->Seperated_Sub_Section($CompanyCode, $LocationCode, $Date, $Shift, $Sub_Section, $Login_User);
             $this->data['User_Department'] = $User_Department = $this->Work_Model->User_Department($CompanyCode, $LocationCode, $Login_User);
+            $this->data['Work_Allocation_Details_Count'] = $Work_Allocation_Details_Count = $this->Work_Model->Work_Allocation_Details_Count($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+            $this->data['Get_Allocated_Machine_ID'] = $Get_Allocated_Machine_ID = $this->Work_Model->Get_Allocated_Machine_ID($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Type);
+
+
+
 
             if (isset($Seperated_Sub_Section) && !empty($Seperated_Sub_Section)) {
 
@@ -162,6 +175,7 @@ class Work extends CI_Controller
             $Shift = $this->input->post('Shift');
             $Type = $this->input->post('Type');
 
+            $this->data['Location_Code'] = $LocationCode;
             $this->data['Shift_Employee_List'] = $Shift_Employee_List = $this->Work_Model->Shift_Employee_List($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Type);
             $this->data['User_Department'] = $User_Department = $this->Work_Model->User_Department($CompanyCode, $LocationCode, $Login_User);
             $this->data['Work_Allocation_Details_Count'] = $Work_Allocation_Details_Count = $this->Work_Model->Work_Allocation_Details_Count($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
@@ -359,7 +373,7 @@ class Work extends CI_Controller
 
             // print_r($input_data);exit;
 
-            $this->data['Work_Allocation'] = $Work_Allocation = $this->Work_Model->Assign($input_data, $CompanyCode, $LocationCode);
+            $this->data['Work_Allocation'] = $Work_Allocation = $this->Work_Model->Assign($input_data, $CompanyCode, $LocationCode,$Login_User);
 
 
             foreach ($input_data['Allocations'] as $row) {
@@ -393,7 +407,7 @@ class Work extends CI_Controller
 
             $input_data = json_decode($this->input->raw_input_stream, true);
 
-            $this->data['Edit'] = $Work_Allocation = $this->Work_Model->Edit($input_data, $CompanyCode, $LocationCode);
+            $this->data['Edit'] = $Work_Allocation = $this->Work_Model->Edit($input_data, $CompanyCode, $LocationCode,$Login_User);
 
 
             foreach ($input_data['Allocations'] as $row) {
@@ -450,6 +464,9 @@ class Work extends CI_Controller
         $Session = $this->session->userdata('sess_array');
         if (!empty($Session) && isset($Session['IsOnLogin']) &&  $Session['IsOnLogin'] === TRUE) {
 
+            $this->data['Location_Code'] =   $Session['Lcode'];
+            $CompanyCode =   $Session['Ccode'];
+            $Login_User =  $Session['UserName'];
 
             $this->data['Favicon'] = 'Precot | Late And Extra Work Allocation';
             $this->data['Department'] = $Department = $Session['Department'];
@@ -478,9 +495,11 @@ class Work extends CI_Controller
             $Date = $this->input->post('Date');
             $Shift = $this->input->post('Shift');
 
+            $this->data['Location_Code'] = $LocationCode;
             $this->data['Late_And_Extra_Employee_List'] = $Late_And_Extra_Employee_List = $this->Late_Extra_Model->Late_And_Extra_Employee_List($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
             $this->data['Late_And_Extra_Employee_Count'] = $Late_And_Extra_Employee_Count = $this->Late_Extra_Model->Late_And_Extra_Employee_Count($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
             $this->data['User_Department'] = $User_Department = $this->Work_Model->User_Department($CompanyCode, $LocationCode, $Login_User);
+            $this->data['Get_Allocated_Machine_ID'] = $Get_Allocated_Machine_ID = $this->Work_Model->Get_Allocated_Machine_ID($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
 
             if (isset($Late_And_Extra_Employee_List)) {
                 echo  json_encode($this->data);
@@ -504,7 +523,7 @@ class Work extends CI_Controller
 
             $input_data = json_decode($this->input->raw_input_stream, true);
 
-            $this->data['Work_Allocation'] = $Work_Allocation = $this->Late_Extra_Model->Assign($input_data, $CompanyCode, $LocationCode);
+            $this->data['Work_Allocation'] = $Work_Allocation = $this->Late_Extra_Model->Assign($input_data, $CompanyCode, $LocationCode,$Login_User);
 
 
             foreach ($input_data['Allocations'] as $row) {
@@ -544,6 +563,10 @@ class Work extends CI_Controller
 
             $this->data['Seperated_Sub_Section'] = $Seperated_Sub_Section = $this->Late_Extra_Model->Seperated_Sub_Section($CompanyCode, $LocationCode, $Date, $Shift, $Sub_Section, $Login_User);
             $this->data['User_Department'] = $User_Department = $this->Work_Model->User_Department($CompanyCode, $LocationCode, $Login_User);
+
+
+
+
 
             if (isset($Seperated_Sub_Section) && !empty($Seperated_Sub_Section)) {
 
@@ -868,6 +891,211 @@ class Work extends CI_Controller
     //     }
 
     // }
+
+public function Un_Allocated_List()
+{
+    $Session = $this->session->userdata('sess_array');
+
+    if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+        $CompanyCode = $Session['Ccode'];
+        $LocationCode = $Session['Lcode'];
+        $Login_User = $Session['UserName'];
+        $Date = $this->input->post('Date');
+        $Shift = $this->input->post('Shift');
+
+            $this->data['Location_Code'] = $LocationCode;
+            $this->data['Un_Allocated_List'] = $Un_Allocated_List = $this->Work_Model->Get_Un_Allocated_List($CompanyCode, $LocationCode, $Login_User, $Shift, $Date);
+            $this->data['User_Department'] = $User_Department = $this->Work_Model->User_Department($CompanyCode, $LocationCode, $Login_User);
+            $this->data['Work_Allocation_Details_Count'] = $Work_Allocation_Details_Count = $this->Work_Model->Work_Allocation_Details_Count($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+            $this->data['Get_Allocated_Machine_ID'] = $Get_Allocated_Machine_ID = $this->Work_Model->Get_Allocated_Machine_ID($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+
+
+            if(isset($Un_Allocated_List)){
+            echo  json_encode($this->data);
+            }
+
+            
+    } else {
+        redirect(base_url());
+    }
+}
+
+
+public function Work_Allocated_List()
+{
+    $Session = $this->session->userdata('sess_array');
+
+    if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+        $CompanyCode = $Session['Ccode'];
+        $LocationCode = $Session['Lcode'];
+        $Login_User = $Session['UserName'];
+        $Date = $this->input->post('Date');
+        $Shift = $this->input->post('Shift');
+
+            $this->data['Location_Code'] = $LocationCode;
+            $this->data['Work_Allocated_List'] = $Work_Allocated_List = $this->Work_Model->Work_Allocated_List($CompanyCode, $LocationCode, $Login_User, $Shift, $Date);
+            $this->data['User_Department'] = $User_Department = $this->Work_Model->User_Department($CompanyCode, $LocationCode, $Login_User);
+            $this->data['Work_Allocation_Details_Count'] = $Work_Allocation_Details_Count = $this->Work_Model->Work_Allocation_Details_Count($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+            $this->data['Get_Allocated_Machine_ID'] = $Get_Allocated_Machine_ID = $this->Work_Model->Get_Allocated_Machine_ID($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+
+
+            if(isset($Work_Allocated_List)){
+            echo  json_encode($this->data);
+            }
+
+            
+    } else {
+        redirect(base_url());
+    }
+}
+
+
+public function No_Work_Allocated_List()
+{
+    $Session = $this->session->userdata('sess_array');
+
+    if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+        $CompanyCode = $Session['Ccode'];
+        $LocationCode = $Session['Lcode'];
+        $Login_User = $Session['UserName'];
+        $Date = $this->input->post('Date');
+        $Shift = $this->input->post('Shift');
+
+            $this->data['Location_Code'] = $LocationCode;
+            $this->data['No_Work_Allocated_List'] = $No_Work_Allocated_List = $this->Work_Model->No_Work_Allocated_List($CompanyCode, $LocationCode, $Login_User, $Shift, $Date);
+            $this->data['User_Department'] = $User_Department = $this->Work_Model->User_Department($CompanyCode, $LocationCode, $Login_User);
+            $this->data['Work_Allocation_Details_Count'] = $Work_Allocation_Details_Count = $this->Work_Model->Work_Allocation_Details_Count($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+            $this->data['Get_Allocated_Machine_ID'] = $Get_Allocated_Machine_ID = $this->Work_Model->Get_Allocated_Machine_ID($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+
+
+            if(isset($No_Work_Allocated_List)){
+            echo  json_encode($this->data);
+            }
+
+            
+    } else {
+        redirect(base_url());
+    }
+}
+
+
+public function Partial_Closed_List()
+{
+    $Session = $this->session->userdata('sess_array');
+
+    if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+        $CompanyCode = $Session['Ccode'];
+        $LocationCode = $Session['Lcode'];
+        $Login_User = $Session['UserName'];
+        $Date = $this->input->post('Date');
+        $Shift = $this->input->post('Shift');
+
+            $this->data['Location_Code'] = $LocationCode;
+            $this->data['Partial_Closed_List'] = $Partial_Closed_List = $this->Work_Model->Partial_Closed_List($CompanyCode, $LocationCode, $Login_User, $Shift, $Date);
+            $this->data['User_Department'] = $User_Department = $this->Work_Model->User_Department($CompanyCode, $LocationCode, $Login_User);
+            $this->data['Work_Allocation_Details_Count'] = $Work_Allocation_Details_Count = $this->Work_Model->Work_Allocation_Details_Count($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+            $this->data['Get_Allocated_Machine_ID'] = $Get_Allocated_Machine_ID = $this->Work_Model->Get_Allocated_Machine_ID($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+
+
+            if(isset($Partial_Closed_List)){
+            echo  json_encode($this->data);
+            }
+
+            
+    } else {
+        redirect(base_url());
+    }
+}
+
+
+public function Shift_Punched_Employee()
+{
+    $Session = $this->session->userdata('sess_array');
+
+    if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+        $CompanyCode = $Session['Ccode'];
+        $LocationCode = $Session['Lcode'];
+        $Login_User = $Session['UserName'];
+        $Date = $this->input->post('Date');
+        $Shift = $this->input->post('Shift');
+
+            $this->data['Location_Code'] = $LocationCode;
+            $this->data['Shift_Punched_Employee'] = $Shift_Punched_Employee = $this->Work_Model->Shift_Punched_Employee($CompanyCode, $LocationCode, $Login_User, $Shift, $Date);
+            $this->data['User_Department'] = $User_Department = $this->Work_Model->User_Department($CompanyCode, $LocationCode, $Login_User);
+            $this->data['Work_Allocation_Details_Count'] = $Work_Allocation_Details_Count = $this->Work_Model->Work_Allocation_Details_Count($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+            $this->data['Get_Allocated_Machine_ID'] = $Get_Allocated_Machine_ID = $this->Work_Model->Get_Allocated_Machine_ID($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+
+
+            if(isset($Shift_Punched_Employee)){
+            echo  json_encode($this->data);
+            }
+
+            
+    } else {
+        redirect(base_url());
+    }
+}
+
+public function Late_Punched_Employee()
+{
+    $Session = $this->session->userdata('sess_array');
+
+    if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+        $CompanyCode = $Session['Ccode'];
+        $LocationCode = $Session['Lcode'];
+        $Login_User = $Session['UserName'];
+        $Date = $this->input->post('Date');
+        $Shift = $this->input->post('Shift');
+
+            $this->data['Location_Code'] = $LocationCode;
+            $this->data['Late_Punched_Employee'] = $Late_Punched_Employee = $this->Work_Model->Late_Punched_Employee($CompanyCode, $LocationCode, $Login_User, $Shift, $Date);
+            $this->data['User_Department'] = $User_Department = $this->Work_Model->User_Department($CompanyCode, $LocationCode, $Login_User);
+            $this->data['Work_Allocation_Details_Count'] = $Work_Allocation_Details_Count = $this->Work_Model->Work_Allocation_Details_Count($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+            $this->data['Get_Allocated_Machine_ID'] = $Get_Allocated_Machine_ID = $this->Work_Model->Get_Allocated_Machine_ID($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+
+
+            if(isset($Late_Punched_Employee)){
+            echo  json_encode($this->data);
+            }else{
+                echo  json_encode($this->data);
+            }
+
+            
+    } else {
+        redirect(base_url());
+    }
+}
+
+public function OT_Employee()
+{
+    $Session = $this->session->userdata('sess_array');
+
+    if (!empty($Session) && isset($Session['IsOnLogin']) && $Session['IsOnLogin'] === TRUE) {
+        $CompanyCode = $Session['Ccode'];
+        $LocationCode = $Session['Lcode'];
+        $Login_User = $Session['UserName'];
+        $Date = $this->input->post('Date');
+        $Shift = $this->input->post('Shift');
+
+            $this->data['Location_Code'] = $LocationCode;
+            $this->data['OT_Employee'] = $OT_Employee = $this->Work_Model->OT_Employee($CompanyCode, $LocationCode, $Login_User, $Shift, $Date);
+            $this->data['User_Department'] = $User_Department = $this->Work_Model->User_Department($CompanyCode, $LocationCode, $Login_User);
+            $this->data['Work_Allocation_Details_Count'] = $Work_Allocation_Details_Count = $this->Work_Model->Work_Allocation_Details_Count($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+            $this->data['Get_Allocated_Machine_ID'] = $Get_Allocated_Machine_ID = $this->Work_Model->Get_Allocated_Machine_ID($CompanyCode, $LocationCode, $Login_User, $Date, $Shift);
+
+
+            if(isset($OT_Employee)){
+            echo  json_encode($this->data);
+            }
+
+            
+    } else {
+        redirect(base_url());
+    }
+}
+
+
+
 
 
 

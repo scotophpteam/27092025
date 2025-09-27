@@ -137,31 +137,42 @@ $(document).ready(function () {
           const Late_And_Extra_Employee_Count = Response_Data.Late_And_Extra_Employee_Count;
 
           if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !== undefined) {
-              const lateComersCount = Late_And_Extra_Employee_Count.Late_Comers;
-              $('#unAllocatedBtn').text('Late Punched Employee : '+lateComersCount);
+            const lateComersCount = Late_And_Extra_Employee_Count.Late_Comers;
+            $('#unAllocatedBtn').text('Late Punched Employee : ' + lateComersCount);
           }
 
+          if (Response_Data.Location_Code == 'PRECOT - A' || Response_Data.Location_Code == 'PRECOT - C' || Response_Data.Location_Code == 'PRECOT - D') {
 
-          if (Shift_Employee_List.Status == "Error") {
-            swal({
-              type: "warning",
-              title: "Warning",
-              text: Shift_Employee_List.Message,
+
+            if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+              swal({
+                type: "warning",
+                title: "Warning",
+                text: 'Employee Details Not Found Please Check It...!',
+              });
+              $("#Allocation_Table tbody").empty();
+              $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+              return;
+            }
+
+            const uniqueEmpMap = new Map();
+            Shift_Employee_List.forEach((item) => {
+              if (item.Work_Status == 1) {
+                if (!uniqueEmpMap.has(item.EmpNo)) {
+                  uniqueEmpMap.set(item.EmpNo, { ...item });
+                } else {
+                  const existing = uniqueEmpMap.get(item.EmpNo);
+                  if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                    existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                  }
+                }
+              }
             });
 
-            $("#Allocation_Table tbody").empty();
-            $(
-              "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-            ).hide();
-          } else {
-
-
-            const filteredShiftEmployeeList = Shift_Employee_List.filter(
-              (item) => item.Work_Status == 1
-            );
+            const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
 
             $("#Allocation_Table tbody").empty();
-            table.clear().draw(); // clears previous data
+            table.clear().draw();
 
             if (filteredShiftEmployeeList.length === 0) {
               swal({
@@ -169,252 +180,331 @@ $(document).ready(function () {
                 title: "Warning",
                 text: "Shift Not Starting Details Not Found!",
               });
+              $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+              return;
+            }
 
-              $(
-                "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-              ).hide();
-            } else {
-              $(
-                "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-              ).show();
+            $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
 
-              let groupedByWages = {};
-              let wageEmployeeCount = {};
+            let continuousIndex = 1;
+            const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
 
-              filteredShiftEmployeeList.forEach((item) => {
-                const wage = item.Wages || "NULL";
-                if (!groupedByWages[wage]) {
-                  groupedByWages[wage] = [];
-                  wageEmployeeCount[wage] = new Set();
-                }
-                groupedByWages[wage].push(item);
-                wageEmployeeCount[wage].add(item.EmpNo);
-              });
+            filteredShiftEmployeeList.forEach((item) => {
+              let shiftLabel = "";
+              if (item.Working_Type === "OT") {
+                if (item.Previous_Shift === "SHIFT1") shiftLabel = "S1";
+                else if (item.Previous_Shift === "SHIFT2") shiftLabel = "S2";
+                else if (item.Previous_Shift === "SHIFT3") shiftLabel = "S3";
+              }
 
-              const customOrder = [
-                "PERMANENT WORKER",
-                "CONTRACT WORKER",
-                "OTHER WORKER",
-                "OTHERS",
-                "POOL",
-                "ANCILLARY",
-                "LOADING",
-                "OSP",
-                "A1",
-                "A2",
-                "A3",
-                "SCHEME",
-                "STAFF",
-              ];
+              const departmentOptions = uniqueDepartments
+                .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+                .join("");
 
-              let wageGroups = Object.keys(groupedByWages);
+              const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
 
-              wageGroups.sort((a, b) => {
-                const indexA = customOrder.indexOf(a);
-                const indexB = customOrder.indexOf(b);
+              const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+                ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+                : "";
 
-                if (indexA === -1 && indexB === -1) {
-                  return a.localeCompare(b);
-                } else if (indexA === -1) {
-                  return 1;
-                } else if (indexB === -1) {
-                  return -1;
-                }
-                return indexA - indexB;
-              });
+              const frameOptions = item.Assign_Status == 1
+                ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+                : "";
 
-              let continuousIndex = 1;
-
-              wageGroups.forEach((wage) => {
-                const employeeCount = wageEmployeeCount[wage].size;
-
-                let groupedData = {};
-
-                groupedByWages[wage].forEach((item) => {
-                  const key = `${item.EmpNo}_${item.Sub_Department}_${item.WorkArea}_${item.Job_Card_No}`;
-                  if (!groupedData[key]) {
-                    groupedData[key] = { ...item, Machine_Id: [], Frame: [] };
-                  }
-                  groupedData[key].Machine_Id.push(item.Machine_Id);
-                  groupedData[key].Frame.push(item.Frame);
-                });
-
-                const sortedEmployees = Object.values(groupedData).sort(
-                  (a, b) => {
-                    const nameA = a.FirstName.toUpperCase();
-                    const nameB = b.FirstName.toUpperCase();
-                    return nameA.localeCompare(nameB);
-                  }
-                );
-
-                sortedEmployees.forEach((item, index) => {
-                  item.Frame = [...new Set(item.Frame)];
-
-                  const uniqueDepartments = [
-                    ...new Set(
-                      User_Department.map((dept) => dept.Sub_Department)
-                    ),
-                  ];
-
-                  const departmentOptions = uniqueDepartments
-                    .map(
-                      (dept) =>
-                        `<option value="${dept}" ${
-                          dept === item.Sub_Department ? "selected" : ""
-                        }>${dept}</option>`
-                    )
-                    .join("");
-
-                  const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
-                  const jobCardOption = `<option value="${item.Job_Card_No}" selected>${item.Job_Card_No}</option>`;
-
-                  let machineOptions = "";
-                  let frameOptions = "";
-
-                  if (item.Assign_Status == 1) {
-                    machineOptions = item.Machine_Id.map(
-                      (machine) =>
-                        `<option value="${machine}" selected>${machine}</option>`
-                    ).join("");
-
-                    frameOptions = item.Frame.map(
-                      (frame) =>
-                        `<option value="${frame}" selected>${frame}</option>`
-                    ).join("");
-                  }
-
-                  const rowBackgroundColor =
-                    item.Status_Updated === "Machine" ||
-                    item.Status_Updated === "Others" ||
-                    item.Status_Updated === "Multiple Trainee" ||
-                    item.Status_Updated === "Trainee"
-                      ? "background-color: #A7FEA5;"
-                      : item.Status_Updated === "NoWork"
-                      ? "background-color: #FFE992;"
-                      : item.Status_Updated === "Closed"
+              const rowBackgroundColor =
+                item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                  item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                  ? "background-color: #A7FEA5;"
+                  : item.Status_Updated === "NoWork"
+                    ? "background-color: #FFE992;"
+                    : item.Status_Updated === "Closed"
                       ? "background-color: rgb(250, 126, 126);"
                       : "";
 
-                  const assignButtonVisibility =
-                    item.Assign_Status == 1 || item.Closing_Status == "1"
-                      ? "display: none;"
-                      : "display: inline;";
-                  const editButtonVisibility =
-                    item.Assign_Status == 1 && item.Closing_Status != "1"
-                      ? "display: inline;"
-                      : "display: none;";
+              const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+              const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
 
-                  const row = `<tr>
-                    <td style="${rowBackgroundColor}">${continuousIndex}</td>
-                    <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
-                    <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
-                    <td style="${rowBackgroundColor}" class="Employee_Id" value="${
-                    item.EmpNo
-                  }">${item.EmpNo}</td>
-                    <td style="${rowBackgroundColor}">${item.FirstName}</td>
-                    <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px; line-height: 1.2; text-align: center;">${frameOptions}</select></td>
-                    <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px; line-height: 1.2; text-align: center;">${
-                    machineOptions || ""
-                  }</select></td>
-                    <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${
-                    item.Description || ""
-                  }" style="width: 200px; text-align: center;"></td>
-                    <td>
-                        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
-                        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
-                    </td>
-                </tr>`;
+              const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="display: none;"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+    </tr>`;
 
-                  $("#Allocation_Table tbody").append(row);
-                  continuousIndex++;
-                  table.row.add($(row)).draw();
+              $("#Allocation_Table tbody").append(row);
+              table.row.add($(row)).draw();
+              continuousIndex++;
+            });
+
+            $.ajax({
+              url: baseurl + "Work/Work_Areas",
+              method: "POST",
+              data: { Department: $(".Department").val() },
+              success: function (response) {
+                const Response_Data = JSON.parse(response);
+                const Work_Areas = Response_Data.Work_Areas;
+
+                $("#Allocation_Table tbody tr").each(function () {
+                  const workAreaSelect = $(this).find(".WorkArea");
+                  $.each(Work_Areas, function (_, workArea) {
+                    if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                      workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                    }
+                  });
                 });
-              });
+              },
+            });
+
+            $("#Allocation_Table tbody tr").each(function () {
+              const $row = $(this);
+              const Department = $row.find(".Department").val();
+              const WorkArea = $row.find(".WorkArea").val();
+              const JobCardNo = "";
+              const Date = $("#Date").val();
+              const Shift = $("#Shift").val();
 
               $.ajax({
-                url: baseurl + "Work/Work_Areas",
+                url: baseurl + "Work/Work_Type",
                 method: "POST",
-                data: { Department: $(".Department").val() },
+                data: { Department, WorkArea, JobCardNo, Date, Shift },
                 success: function (response) {
                   const Response_Data = JSON.parse(response);
-                  const Work_Areas = Response_Data.Work_Areas;
+                  const Work_Type = Response_Data.Work_Type;
+                  const frameSelect = $row.find(".Frame");
 
-                  $("#Allocation_Table tbody tr").each(function () {
-                    const workAreaSelect = $(this).find(".WorkArea");
-                    $.each(Work_Areas, function (index, workArea) {
-                      workAreaSelect.append(
-                        `<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`
-                      );
-                    });
+                  let options =
+                    "<option value=''></option>" +
+                    "<option value='Others'>Others</option>" +
+                    "<option value='Multiple Trainee'>Multiple Trainee</option>" +
+                    "<option value='Trainee'>Trainee</option>" +
+                    "<option value='NoWork'>NoWork</option>";
+
+                  const addedFrames = new Set();
+
+                  $.each(Work_Type, function (_, work) {
+                    if (work.Frame && !addedFrames.has(work.Frame)) {
+                      options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                      addedFrames.add(work.Frame);
+                    }
                   });
+
+                  frameSelect.append(options);
                 },
               });
+            });
 
-              $("#Allocation_Table tbody tr").each(function () {
-                const $row = $(this);
-                const Department = $row.find(".Department").val();
-                const WorkArea = $row.find(".WorkArea").val();
-                const JobCardNo = $row.find(".JobCardNo").val();
-                const Date = $("#Date").val();
-                const Shift = $("#Shift").val();
+            $("#Allocation_Table tbody .custom-select2").select2({
+              placeholder: "",
+              allowClear: true,
+              width: "150px",
+              dropdownCssClass: "custom-select2-dropdown",
+              containerCssClass: "custom-select2-container",
+            });
 
-                $.ajax({
-                  url: baseurl + "Work/Work_Type",
-                  method: "POST",
-                  data: { Department, WorkArea, JobCardNo, Date, Shift },
-                  success: function (response) {
-                    const Response_Data = JSON.parse(response);
-                    const Work_Type = Response_Data.Work_Type;
-                    const machineSelect = $row.find(".Machine_Id");
-                    const frameSelect = $row.find(".Frame");
 
-                    var options =
-                      "<option value=''></option>" +
-                      "<option value='Others'>Others</option>" +
-                      "<option value='Multiple Trainee'>Multiple Trainee</option>" +
-                      "<option value='Trainee'>Trainee</option>" +
-                      "<option value='NoWork'>NoWork</option>";
 
-                    var machineWiseAdded = false;
-                    var addedFrames = new Set(); // To track unique frames
 
-                    if (Work_Type.length > 0) {
-                      $.each(Work_Type, function (index, work) {
-                        if (work.Frame == "" && work.Machine_Id != "") {
-                          if (!machineWiseAdded) {
-                            options +=
-                              "<option value='Machine Wise'>Machine Wise</option>";
-                            machineWiseAdded = true;
-                          }
-                        } else {
-                          // Add frame only if it's not already added (unique)
-                          if (!addedFrames.has(work.Frame)) {
-                            options += `<option value="${work.Frame}">${work.Frame}</option>`;
-                            addedFrames.add(work.Frame); // Mark the frame as added
-                          }
-                        }
-                      });
-                      frameSelect.append(options);
-                    } else {
-                      frameSelect.append(options);
-                    }
-                  },
-                });
+          } else {
+
+
+            if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+              swal({
+                type: "warning",
+                title: "Warning",
+                text: 'Employee Details Not Found Please Check It...!',
               });
-
-              $("#Allocation_Table tbody .custom-select2").select2({
-                placeholder: "",
-                allowClear: true,
-                width: "150px",
-                dropdownCssClass: "custom-select2-dropdown",
-                containerCssClass: "custom-select2-container",
-              });
+              $("#Allocation_Table tbody").empty();
+              $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+              return;
             }
+
+            const uniqueEmpMap = new Map();
+            Shift_Employee_List.forEach((item) => {
+              if (item.Work_Status == 1) {
+                if (!uniqueEmpMap.has(item.EmpNo)) {
+                  uniqueEmpMap.set(item.EmpNo, { ...item });
+                } else {
+                  const existing = uniqueEmpMap.get(item.EmpNo);
+                  if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                    existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                  }
+                }
+              }
+            });
+
+            const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
+
+            $("#Allocation_Table tbody").empty();
+            table.clear().draw();
+
+            if (filteredShiftEmployeeList.length === 0) {
+              swal({
+                type: "warning",
+                title: "Warning",
+                text: "Shift Not Starting Details Not Found!",
+              });
+              $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+              return;
+            }
+
+            $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
+
+            let continuousIndex = 1;
+            const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
+
+            filteredShiftEmployeeList.forEach((item) => {
+              const departmentOptions = uniqueDepartments
+                .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+                .join("");
+
+              const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
+
+              const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+                ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+                : "";
+
+              const frameOptions = item.Assign_Status == 1
+                ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+                : "";
+
+              const rowBackgroundColor =
+                item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                  item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                  ? "background-color: #A7FEA5;"
+                  : item.Status_Updated === "NoWork"
+                    ? "background-color: #FFE992;"
+                    : item.Status_Updated === "Closed"
+                      ? "background-color: rgb(250, 126, 126);"
+                      : "";
+
+              const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+              const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
+
+              const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}">${item.Type}</td>
+    </tr>`;
+
+              $("#Allocation_Table tbody").append(row);
+              table.row.add($(row)).draw();
+              continuousIndex++;
+            });
+
+            $.ajax({
+              url: baseurl + "Work/Work_Areas",
+              method: "POST",
+              data: { Department: $(".Department").val() },
+              success: function (response) {
+                const Response_Data = JSON.parse(response);
+                const Work_Areas = Response_Data.Work_Areas;
+
+                $("#Allocation_Table tbody tr").each(function () {
+                  const workAreaSelect = $(this).find(".WorkArea");
+                  $.each(Work_Areas, function (_, workArea) {
+                    if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                      workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                    }
+                  });
+                });
+              },
+            });
+
+            $("#Allocation_Table tbody tr").each(function () {
+              const $row = $(this);
+              const Department = $row.find(".Department").val();
+              const WorkArea = $row.find(".WorkArea").val();
+              const JobCardNo = "";
+              const Date = $("#Date").val();
+              const Shift = $("#Shift").val();
+
+              $.ajax({
+                url: baseurl + "Work/Work_Type",
+                method: "POST",
+                data: { Department, WorkArea, JobCardNo, Date, Shift },
+                success: function (response) {
+                  const Response_Data = JSON.parse(response);
+                  const Work_Type = Response_Data.Work_Type;
+                  const frameSelect = $row.find(".Frame");
+
+                  let options =
+                    "<option value=''></option>" +
+                    "<option value='Others'>Others</option>" +
+                    "<option value='Multiple Trainee'>Multiple Trainee</option>" +
+                    "<option value='Trainee'>Trainee</option>" +
+                    "<option value='NoWork'>NoWork</option>";
+
+                  const addedFrames = new Set();
+
+                  $.each(Work_Type, function (_, work) {
+                    if (work.Frame && !addedFrames.has(work.Frame)) {
+                      options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                      addedFrames.add(work.Frame);
+                    }
+                  });
+
+                  frameSelect.append(options);
+                },
+              });
+            });
+
+            $("#Allocation_Table tbody .custom-select2").select2({
+              placeholder: "",
+              allowClear: true,
+              width: "150px",
+              dropdownCssClass: "custom-select2-dropdown",
+              containerCssClass: "custom-select2-container",
+            });
+
           }
+
         },
       });
 
+
+
+
+      $("#Assign_Type").on("change", function () {
+
+        var Assign_Type = $("#Assign_Type").val();
+
+        if (Assign_Type == 'EXTRA') {
+
+          $("#Shift_Div").hide();
+          $("#Sub_Section_Div").hide();
+
+
+        } else {
+
+          $("#Shift_Div").show();
+          $("#Sub_Section_Div").show();
+
+        }
+
+
+      })
+
       $("#Allocation_Table tbody").on("change", ".Frame", function () {
+
+
         const $row = $(this).closest("tr");
         const department = $row.find(".Department").val();
         const workArea = $row.find(".WorkArea").val();
@@ -431,6 +521,8 @@ $(document).ready(function () {
         }
 
         if (frameSelect == "Machine Wise") {
+
+
           if (frameSelect.includes("Others")) {
             machineSelect.prop("disabled", false).val("");
             description.val(workArea);
@@ -481,6 +573,8 @@ $(document).ready(function () {
             },
           });
         } else {
+
+
           if (frameSelect.includes("Others")) {
             machineSelect.prop("disabled", true).val("");
             description.val(workArea);
@@ -557,6 +651,7 @@ $(document).ready(function () {
                 frameSelect,
               },
               success: function (response) {
+
                 const Response_Data = JSON.parse(response);
                 const Machines = Response_Data.Machine_Ids || [];
 
@@ -912,577 +1007,201 @@ $(document).ready(function () {
       });
 
       $("#Allocation_Table tbody").on("click", ".Assign-btn", function () {
-        const $row = $(this).closest("tr");
-        const Frames = $row.find(".Frame").val();
-        const FrameType = $row.find(".FrameType").val();
-        const Machine_Id = $row.find(".Machine_Id").val(); // Get the value of Machine_Id (not the jQuery object)
-        const Department = $row.find(".Department").val();
-        const JobCardNo = "";
-        const WorkArea = $row.find(".WorkArea").val();
-        const Date = $("#Date").val();
-        const Shift = $("#Shift").val();
-        const Description = $row.find(".Description").val();
-        const EmployeeId = $row.find(".Employee_Id").text();
-        const Allocation_Type = $("#Assign_Type").val();
-        const Allocation_Screen_Type = $("#Allocation_Screen_Type").val();
-        const Supervisor = $("#Supervisor_Name").val();
 
-        var allocationData = {
-          Date: Date,
-          Department: Department,
-          Shift: Shift,
-          Work_Area: WorkArea,
-          JobCardNo: JobCardNo,
-          EmployeeId: EmployeeId,
-          Machine_Id: Machine_Id, // Just the value
-          FrameType: FrameType, // Just the value
-          Frames: Frames, // Just the value
-          Description: Description,
-          Allocation_Type: Allocation_Type,
-          Allocation_Screen_Type,
-          Supervisor,
-        };
+        var Assign_Type = $("#Assign_Type").val();
 
-        var Row_Data = {
-          Allocations: [allocationData],
-        };
+        if (Assign_Type == '' || Assign_Type == null) {
 
-        $.ajax({
-          url: baseurl + "Work/Late_Extra_Save",
-          method: "POST",
-          data: JSON.stringify(Row_Data),
-          Date,
-          Shift,
-          Allocation_Type,
-          contentType: "application/json",
-          success: function (response) {
-            //  $("#Allocation_Table tbody").empty();
-            // $("#Allocation_Table_Container").hide();
+          alert('Please Select Assign Type...');
 
-            var Sub_Section = $("#Sub_Section").val();
-
-            if (Sub_Section == "All") {
-              $.ajax({
-                url: baseurl + "Work/Late_Employee_List",
-                type: "POST",
-                data: {
-                  Date: $("#Date").val(),
-                  Shift: $("#Shift").val(),
-                  Type: $("#Type").val(),
-                },
-                success: function (response) {
-                  const Response_Data = JSON.parse(response);
-
-                  const Shift_Employee_List =
-                    Response_Data.Late_And_Extra_Employee_List;
-                  const User_Department = Response_Data.User_Department;
-
-                  const Late_And_Extra_Employee_Count = Response_Data.Late_And_Extra_Employee_Count;
-
-if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !== undefined) {
-    const lateComersCount = Late_And_Extra_Employee_Count.Late_Comers;
-    $('#unAllocatedBtn').text('Late Punched Employee : '+lateComersCount);
-}
+        }
 
 
-                  if (Shift_Employee_List.Status == "Error") {
-                    swal({
-                      type: "warning",
-                      title: "Warning",
-                      text: Shift_Employee_List.Message,
-                    });
+        if (Assign_Type == 'EXTRA') {
 
-                    $("#Allocation_Table tbody").empty();
-                    $(
-                      "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-                    ).hide();
-                  } else {
-                    const filteredShiftEmployeeList =
-                      Shift_Employee_List.filter(
-                        (item) => item.Work_Status == 1
-                      );
 
-                    $("#Allocation_Table tbody").empty();
-                    table.clear().draw(); // clears previous data
+          const $row = $(this).closest("tr");
+          const Frames = $row.find(".Frame").val();
+          const FrameType = $row.find(".FrameType").val();
+          const Machine_Id = $row.find(".Machine_Id").val(); // Get the value of Machine_Id (not the jQuery object)
+          const Department = $row.find(".Department").val();
+          const JobCardNo = "";
+          const WorkArea = $row.find(".WorkArea").val();
+          const Date = $("#Date").val();
+          const Shift = $("#Shift").val();
+          const Description = $row.find(".Description").val();
+          const EmployeeId = $row.find(".Employee_Id").text();
+          const Allocation_Type = $("#Assign_Type").val();
+          const Allocation_Screen_Type = $("#Allocation_Screen_Type").val();
+          const Supervisor = $("#Supervisor_Name").val();
 
-                    if (filteredShiftEmployeeList.length === 0) {
-                      swal({
-                        type: "warning",
-                        title: "Warning",
-                        text: "Shift Not Starting Details Not Found!",
-                      });
+          var allocationData = {
+            Date: Date,
+            Department: Department,
+            Shift: Shift,
+            Work_Area: WorkArea,
+            JobCardNo: JobCardNo,
+            EmployeeId: EmployeeId,
+            Machine_Id: Machine_Id, // Just the value
+            FrameType: FrameType, // Just the value
+            Frames: Frames, // Just the value
+            Description: Description,
+            Allocation_Type: Allocation_Type,
+            Allocation_Screen_Type,
+            Supervisor,
+          };
 
-                      $(
-                        "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-                      ).hide();
-                    } else {
-                      $(
-                        "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-                      ).show();
+          var Row_Data = {
+            Allocations: [allocationData],
+          };
 
-                      let groupedByWages = {};
-                      let wageEmployeeCount = {};
+          $.ajax({
+            url: baseurl + "Work/Late_Extra_Save",
+            method: "POST",
+            data: JSON.stringify(Row_Data),
+            Date,
+            Shift,
+            Allocation_Type,
+            contentType: "application/json",
+            success: function (response) {
+              //  $("#Allocation_Table tbody").empty();
+              // $("#Allocation_Table_Container").hide();
 
-                      filteredShiftEmployeeList.forEach((item) => {
-                        const wage = item.Wages || "NULL";
-                        if (!groupedByWages[wage]) {
-                          groupedByWages[wage] = [];
-                          wageEmployeeCount[wage] = new Set();
-                        }
-                        groupedByWages[wage].push(item);
-                        wageEmployeeCount[wage].add(item.EmpNo);
-                      });
+              var Sub_Section = $("#Sub_Section").val();
 
-                      const customOrder = [
-                        "PERMANENT WORKER",
-                        "CONTRACT WORKER",
-                        "OTHER WORKER",
-                        "OTHERS",
-                        "POOL",
-                        "ANCILLARY",
-                        "LOADING",
-                        "OSP",
-                        "A1",
-                        "A2",
-                        "A3",
-                        "SCHEME",
-                        "STAFF",
-                      ];
+              if (Sub_Section == "All") {
+                $.ajax({
+                  url: baseurl + "Work/Late_Employee_List",
+                  type: "POST",
+                  data: {
+                    Date: $("#Date").val(),
+                    Shift: $("#Shift").val(),
+                    Type: $("#Type").val(),
+                  },
+                  success: function (response) {
 
-                      let wageGroups = Object.keys(groupedByWages);
+                    var options =
+                      "<option value=''></option>" +
+                      "<option value='LATE'>LATE</option>" +
+                      "<option value='EXTRA'>EXTRA</option>";
 
-                      wageGroups.sort((a, b) => {
-                        const indexA = customOrder.indexOf(a);
-                        const indexB = customOrder.indexOf(b);
+                    $("#Assign_Type").empty();
+                    $("#Assign_Type").append(options);
 
-                        if (indexA === -1 && indexB === -1) {
-                          return a.localeCompare(b);
-                        } else if (indexA === -1) {
-                          return 1;
-                        } else if (indexB === -1) {
-                          return -1;
-                        }
-                        return indexA - indexB;
-                      });
+                    const Response_Data = JSON.parse(response);
 
-                      let continuousIndex = 1;
+                    const Shift_Employee_List =
+                      Response_Data.Late_And_Extra_Employee_List;
+                    const User_Department = Response_Data.User_Department;
 
-                      wageGroups.forEach((wage) => {
-                        const employeeCount = wageEmployeeCount[wage].size;
+                    const Late_And_Extra_Employee_Count = Response_Data.Late_And_Extra_Employee_Count;
 
-                        let groupedData = {};
-
-                        groupedByWages[wage].forEach((item) => {
-                          const key = `${item.EmpNo}_${item.Sub_Department}_${item.WorkArea}_${item.Job_Card_No}`;
-                          if (!groupedData[key]) {
-                            groupedData[key] = {
-                              ...item,
-                              Machine_Id: [],
-                              Frame: [],
-                            };
-                          }
-                          groupedData[key].Machine_Id.push(item.Machine_Id);
-                          groupedData[key].Frame.push(item.Frame);
-                        });
-
-                        const sortedEmployees = Object.values(groupedData).sort(
-                          (a, b) => {
-                            const nameA = a.FirstName.toUpperCase();
-                            const nameB = b.FirstName.toUpperCase();
-                            return nameA.localeCompare(nameB);
-                          }
-                        );
-
-                        sortedEmployees.forEach((item, index) => {
-                          item.Frame = [...new Set(item.Frame)];
-
-                          const uniqueDepartments = [
-                            ...new Set(
-                              User_Department.map((dept) => dept.Sub_Department)
-                            ),
-                          ];
-
-                          const departmentOptions = uniqueDepartments
-                            .map(
-                              (dept) =>
-                                `<option value="${dept}" ${
-                                  dept === item.Sub_Department ? "selected" : ""
-                                }>${dept}</option>`
-                            )
-                            .join("");
-
-                          const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
-                          const jobCardOption = `<option value="${item.Job_Card_No}" selected>${item.Job_Card_No}</option>`;
-
-                          let machineOptions = "";
-                          let frameOptions = "";
-
-                          if (item.Assign_Status == 1) {
-                            machineOptions = item.Machine_Id.map(
-                              (machine) =>
-                                `<option value="${machine}" selected>${machine}</option>`
-                            ).join("");
-
-                            frameOptions = item.Frame.map(
-                              (frame) =>
-                                `<option value="${frame}" selected>${frame}</option>`
-                            ).join("");
-                          }
-
-                          const rowBackgroundColor =
-                            item.Status_Updated === "Machine" ||
-                            item.Status_Updated === "Others" ||
-                            item.Status_Updated === "Multiple Trainee" ||
-                            item.Status_Updated === "Trainee"
-                              ? "background-color: #A7FEA5;"
-                              : item.Status_Updated === "NoWork"
-                              ? "background-color: #FFE992;"
-                              : item.Status_Updated === "Closed"
-                              ? "background-color: rgb(250, 126, 126);"
-                              : "";
-
-                          const assignButtonVisibility =
-                            item.Assign_Status == 1 ||
-                            item.Closing_Status == "1"
-                              ? "display: none;"
-                              : "display: inline;";
-                          const editButtonVisibility =
-                            item.Assign_Status == 1 &&
-                            item.Closing_Status != "1"
-                              ? "display: inline;"
-                              : "display: none;";
-
-                          const row = `<tr>
-						  <td style="${rowBackgroundColor}">${continuousIndex}</td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
-						  <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${
-                            item.EmpNo
-                          }</td>
-						  <td style="${rowBackgroundColor}">${item.FirstName}</td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px; line-height: 1.2; text-align: center;">${frameOptions}</select></td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px; line-height: 1.2; text-align: center;">${
-                            machineOptions || ""
-                          }</select></td>
-						  <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${
-                            item.Description || ""
-                          }" style="width: 200px; text-align: center;"></td>
-						  <td>
-							  <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
-							  <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
-						  </td>
-					  </tr>`;
-
-                          $("#Allocation_Table tbody").append(row);
-                          continuousIndex++;
-                          table.row.add($(row)).draw();
-                        });
-                      });
-
-                      $.ajax({
-                        url: baseurl + "Work/Work_Areas",
-                        method: "POST",
-                        data: { Department: $(".Department").val() },
-                        success: function (response) {
-                          const Response_Data = JSON.parse(response);
-                          const Work_Areas = Response_Data.Work_Areas;
-
-                          $("#Allocation_Table tbody tr").each(function () {
-                            const workAreaSelect = $(this).find(".WorkArea");
-                            $.each(Work_Areas, function (index, workArea) {
-                              workAreaSelect.append(
-                                `<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`
-                              );
-                            });
-                          });
-                        },
-                      });
-
-                      $("#Allocation_Table tbody tr").each(function () {
-                        const $row = $(this);
-                        const Department = $row.find(".Department").val();
-                        const WorkArea = $row.find(".WorkArea").val();
-                        const JobCardNo = $row.find(".JobCardNo").val();
-                        const Date = $("#Date").val();
-                        const Shift = $("#Shift").val();
-
-                        $.ajax({
-                          url: baseurl + "Work/Work_Type",
-                          method: "POST",
-                          data: {
-                            Department,
-                            WorkArea,
-                            JobCardNo,
-                            Date,
-                            Shift,
-                          },
-                          success: function (response) {
-                            const Response_Data = JSON.parse(response);
-                            const Work_Type = Response_Data.Work_Type;
-                            const machineSelect = $row.find(".Machine_Id");
-                            const frameSelect = $row.find(".Frame");
-
-                            var options =
-                              "<option value=''></option>" +
-                              "<option value='Others'>Others</option>" +
-                              "<option value='Multiple Trainee'>Multiple Trainee</option>" +
-                              "<option value='Trainee'>Trainee</option>" +
-                              "<option value='NoWork'>NoWork</option>";
-
-                            var machineWiseAdded = false;
-                            var addedFrames = new Set(); // To track unique frames
-
-                            if (Work_Type.length > 0) {
-                              $.each(Work_Type, function (index, work) {
-                                if (work.Frame == "" && work.Machine_Id != "") {
-                                  if (!machineWiseAdded) {
-                                    options +=
-                                      "<option value='Machine Wise'>Machine Wise</option>";
-                                    machineWiseAdded = true;
-                                  }
-                                } else {
-                                  // Add frame only if it's not already added (unique)
-                                  if (!addedFrames.has(work.Frame)) {
-                                    options += `<option value="${work.Frame}">${work.Frame}</option>`;
-                                    addedFrames.add(work.Frame); // Mark the frame as added
-                                  }
-                                }
-                              });
-                              frameSelect.append(options);
-                            } else {
-                              frameSelect.append(options);
-                            }
-                          },
-                        });
-                      });
-
-                      $("#Allocation_Table tbody .custom-select2").select2({
-                        placeholder: "",
-                        allowClear: true,
-                        width: "150px",
-                        dropdownCssClass: "custom-select2-dropdown",
-                        containerCssClass: "custom-select2-container",
-                      });
-                    }
-                  }
-                },
-              });
-            } else {
-              $.ajax({
-                url: baseurl + "Work/Seperated_Sub_Section",
-                type: "POST",
-                data: {
-                  Date: $("#Date").val(),
-                  Shift: $("#Shift").val(),
-                  Sub_Section: $("#Sub_Section").val(), // Corrected this line
-                },
-                success: function (response) {
-                  const Response_Data = JSON.parse(response);
-
-                  const Shift_Employee_List =
-                    Response_Data.Late_And_Extra_Employee_List;
-                  const User_Department = Response_Data.User_Department;
-
-                  const Late_And_Extra_Employee_Count = Response_Data.Late_And_Extra_Employee_Count;
-
-                  if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !== undefined) {
+                    if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !== undefined) {
                       const lateComersCount = Late_And_Extra_Employee_Count.Late_Comers;
-                      $('#unAllocatedBtn').text('Late Punched Employee : '+lateComersCount);
-                  }
+                      $('#unAllocatedBtn').text('Late Punched Employee : ' + lateComersCount);
+                    }
+
+                    if (Response_Data.Location_Code == 'PRECOT - A' || Response_Data.Location_Code == 'PRECOT - C' || Response_Data.Location_Code == 'PRECOT - D') {
 
 
-                  if (Shift_Employee_List.Status == "Error") {
-                    swal({
-                      type: "warning",
-                      title: "Warning",
-                      text: Shift_Employee_List.Message,
-                    });
+                      if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: 'Employee Details Not Found Please Check It...!',
+                        });
+                        $("#Allocation_Table tbody").empty();
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
 
-                    $("#Allocation_Table tbody").empty();
-                    $(
-                      "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-                    ).hide();
-                  } else {
-                    const filteredShiftEmployeeList =
-                      Shift_Employee_List.filter(
-                        (item) => item.Work_Status == 1
-                      );
-
-                    $("#Allocation_Table tbody").empty();
-                    table.clear().draw(); // clears previous data
-
-                    if (filteredShiftEmployeeList.length === 0) {
-                      swal({
-                        type: "warning",
-                        title: "Warning",
-                        text: "Shift Not Starting Details Not Found!",
-                      });
-
-                      $(
-                        "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-                      ).hide();
-                    } else {
-                      $(
-                        "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-                      ).show();
-
-                      let groupedByWages = {};
-                      let wageEmployeeCount = {};
-
-                      filteredShiftEmployeeList.forEach((item) => {
-                        const wage = item.Wages || "NULL";
-                        if (!groupedByWages[wage]) {
-                          groupedByWages[wage] = [];
-                          wageEmployeeCount[wage] = new Set();
+                      const uniqueEmpMap = new Map();
+                      Shift_Employee_List.forEach((item) => {
+                        if (item.Work_Status == 1) {
+                          if (!uniqueEmpMap.has(item.EmpNo)) {
+                            uniqueEmpMap.set(item.EmpNo, { ...item });
+                          } else {
+                            const existing = uniqueEmpMap.get(item.EmpNo);
+                            if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                              existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                            }
+                          }
                         }
-                        groupedByWages[wage].push(item);
-                        wageEmployeeCount[wage].add(item.EmpNo);
                       });
 
-                      const customOrder = [
-                        "PERMANENT WORKER",
-                        "CONTRACT WORKER",
-                        "OTHER WORKER",
-                        "OTHERS",
-                        "POOL",
-                        "ANCILLARY",
-                        "LOADING",
-                        "OSP",
-                        "A1",
-                        "A2",
-                        "A3",
-                        "SCHEME",
-                        "STAFF",
-                      ];
+                      const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
 
-                      let wageGroups = Object.keys(groupedByWages);
+                      $("#Allocation_Table tbody").empty();
+                      table.clear().draw();
 
-                      wageGroups.sort((a, b) => {
-                        const indexA = customOrder.indexOf(a);
-                        const indexB = customOrder.indexOf(b);
+                      if (filteredShiftEmployeeList.length === 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: "Shift Not Starting Details Not Found!",
+                        });
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
 
-                        if (indexA === -1 && indexB === -1) {
-                          return a.localeCompare(b);
-                        } else if (indexA === -1) {
-                          return 1;
-                        } else if (indexB === -1) {
-                          return -1;
-                        }
-                        return indexA - indexB;
-                      });
+                      $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
 
                       let continuousIndex = 1;
+                      const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
 
-                      wageGroups.forEach((wage) => {
-                        const employeeCount = wageEmployeeCount[wage].size;
+                      filteredShiftEmployeeList.forEach((item) => {
+                        let shiftLabel = "";
+                        if (item.Working_Type === "OT") {
+                          if (item.Previous_Shift === "SHIFT1") shiftLabel = "S1";
+                          else if (item.Previous_Shift === "SHIFT2") shiftLabel = "S2";
+                          else if (item.Previous_Shift === "SHIFT3") shiftLabel = "S3";
+                        }
 
-                        let groupedData = {};
+                        const departmentOptions = uniqueDepartments
+                          .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+                          .join("");
 
-                        groupedByWages[wage].forEach((item) => {
-                          const key = `${item.EmpNo}_${item.Sub_Department}_${item.WorkArea}_${item.Job_Card_No}`;
-                          if (!groupedData[key]) {
-                            groupedData[key] = {
-                              ...item,
-                              Machine_Id: [],
-                              Frame: [],
-                            };
-                          }
-                          groupedData[key].Machine_Id.push(item.Machine_Id);
-                          groupedData[key].Frame.push(item.Frame);
-                        });
+                        const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
 
-                        const sortedEmployees = Object.values(groupedData).sort(
-                          (a, b) => {
-                            const nameA = a.FirstName.toUpperCase();
-                            const nameB = b.FirstName.toUpperCase();
-                            return nameA.localeCompare(nameB);
-                          }
-                        );
+                        const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+                          ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+                          : "";
 
-                        sortedEmployees.forEach((item, index) => {
-                          item.Frame = [...new Set(item.Frame)];
+                        const frameOptions = item.Assign_Status == 1
+                          ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+                          : "";
 
-                          const uniqueDepartments = [
-                            ...new Set(
-                              User_Department.map((dept) => dept.Sub_Department)
-                            ),
-                          ];
-
-                          const departmentOptions = uniqueDepartments
-                            .map(
-                              (dept) =>
-                                `<option value="${dept}" ${
-                                  dept === item.Sub_Department ? "selected" : ""
-                                }>${dept}</option>`
-                            )
-                            .join("");
-
-                          const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
-                          const jobCardOption = `<option value="${item.Job_Card_No}" selected>${item.Job_Card_No}</option>`;
-
-                          let machineOptions = "";
-                          let frameOptions = "";
-
-                          if (item.Assign_Status == 1) {
-                            machineOptions = item.Machine_Id.map(
-                              (machine) =>
-                                `<option value="${machine}" selected>${machine}</option>`
-                            ).join("");
-
-                            frameOptions = item.Frame.map(
-                              (frame) =>
-                                `<option value="${frame}" selected>${frame}</option>`
-                            ).join("");
-                          }
-
-                          const rowBackgroundColor =
-                            item.Status_Updated === "Machine" ||
-                            item.Status_Updated === "Others" ||
-                            item.Status_Updated === "Multiple Trainee" ||
-                            item.Status_Updated === "Trainee"
-                              ? "background-color: #A7FEA5;"
-                              : item.Status_Updated === "NoWork"
+                        const rowBackgroundColor =
+                          item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                            item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                            ? "background-color: #A7FEA5;"
+                            : item.Status_Updated === "NoWork"
                               ? "background-color: #FFE992;"
                               : item.Status_Updated === "Closed"
-                              ? "background-color: rgb(250, 126, 126);"
-                              : "";
+                                ? "background-color: rgb(250, 126, 126);"
+                                : "";
 
-                          const assignButtonVisibility =
-                            item.Assign_Status == 1 ||
-                            item.Closing_Status == "1"
-                              ? "display: none;"
-                              : "display: inline;";
-                          const editButtonVisibility =
-                            item.Assign_Status == 1 &&
-                            item.Closing_Status != "1"
-                              ? "display: inline;"
-                              : "display: none;";
+                        const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+                        const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
 
-                          const row = `<tr>
-						  <td style="${rowBackgroundColor}">${continuousIndex}</td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
-						  <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${
-                            item.EmpNo
-                          }</td>
-						  <td style="${rowBackgroundColor}">${item.FirstName}</td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px; line-height: 1.2; text-align: center;">${frameOptions}</select></td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px; line-height: 1.2; text-align: center;">${
-                            machineOptions || ""
-                          }</select></td>
-						  <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${
-                            item.Description || ""
-                          }" style="width: 200px; text-align: center;"></td>
-						  <td>
-							  <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
-							  <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
-						  </td>
-					  </tr>`;
+                        const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="display: none;"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+    </tr>`;
 
-                          $("#Allocation_Table tbody").append(row);
-                          continuousIndex++;
-                          table.row.add($(row)).draw();
-                        });
+                        $("#Allocation_Table tbody").append(row);
+                        table.row.add($(row)).draw();
+                        continuousIndex++;
                       });
 
                       $.ajax({
@@ -1495,10 +1214,10 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
 
                           $("#Allocation_Table tbody tr").each(function () {
                             const workAreaSelect = $(this).find(".WorkArea");
-                            $.each(Work_Areas, function (index, workArea) {
-                              workAreaSelect.append(
-                                `<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`
-                              );
+                            $.each(Work_Areas, function (_, workArea) {
+                              if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                                workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                              }
                             });
                           });
                         },
@@ -1508,56 +1227,36 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
                         const $row = $(this);
                         const Department = $row.find(".Department").val();
                         const WorkArea = $row.find(".WorkArea").val();
-                        const JobCardNo = $row.find(".JobCardNo").val();
+                        const JobCardNo = "";
                         const Date = $("#Date").val();
                         const Shift = $("#Shift").val();
 
                         $.ajax({
                           url: baseurl + "Work/Work_Type",
                           method: "POST",
-                          data: {
-                            Department,
-                            WorkArea,
-                            JobCardNo,
-                            Date,
-                            Shift,
-                          },
+                          data: { Department, WorkArea, JobCardNo, Date, Shift },
                           success: function (response) {
                             const Response_Data = JSON.parse(response);
                             const Work_Type = Response_Data.Work_Type;
-                            const machineSelect = $row.find(".Machine_Id");
                             const frameSelect = $row.find(".Frame");
 
-                            var options =
+                            let options =
                               "<option value=''></option>" +
                               "<option value='Others'>Others</option>" +
                               "<option value='Multiple Trainee'>Multiple Trainee</option>" +
                               "<option value='Trainee'>Trainee</option>" +
                               "<option value='NoWork'>NoWork</option>";
 
-                            var machineWiseAdded = false;
-                            var addedFrames = new Set(); // To track unique frames
+                            const addedFrames = new Set();
 
-                            if (Work_Type.length > 0) {
-                              $.each(Work_Type, function (index, work) {
-                                if (work.Frame == "" && work.Machine_Id != "") {
-                                  if (!machineWiseAdded) {
-                                    options +=
-                                      "<option value='Machine Wise'>Machine Wise</option>";
-                                    machineWiseAdded = true;
-                                  }
-                                } else {
-                                  // Add frame only if it's not already added (unique)
-                                  if (!addedFrames.has(work.Frame)) {
-                                    options += `<option value="${work.Frame}">${work.Frame}</option>`;
-                                    addedFrames.add(work.Frame); // Mark the frame as added
-                                  }
-                                }
-                              });
-                              frameSelect.append(options);
-                            } else {
-                              frameSelect.append(options);
-                            }
+                            $.each(Work_Type, function (_, work) {
+                              if (work.Frame && !addedFrames.has(work.Frame)) {
+                                options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                                addedFrames.add(work.Frame);
+                              }
+                            });
+
+                            frameSelect.append(options);
                           },
                         });
                       });
@@ -1569,19 +1268,1339 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
                         dropdownCssClass: "custom-select2-dropdown",
                         containerCssClass: "custom-select2-container",
                       });
+
+
+
+
+                    } else {
+
+
+                      if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: 'Employee Details Not Found Please Check It...!',
+                        });
+                        $("#Allocation_Table tbody").empty();
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
+
+                      const uniqueEmpMap = new Map();
+                      Shift_Employee_List.forEach((item) => {
+                        if (item.Work_Status == 1) {
+                          if (!uniqueEmpMap.has(item.EmpNo)) {
+                            uniqueEmpMap.set(item.EmpNo, { ...item });
+                          } else {
+                            const existing = uniqueEmpMap.get(item.EmpNo);
+                            if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                              existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                            }
+                          }
+                        }
+                      });
+
+                      const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
+
+                      $("#Allocation_Table tbody").empty();
+                      table.clear().draw();
+
+                      if (filteredShiftEmployeeList.length === 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: "Shift Not Starting Details Not Found!",
+                        });
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
+
+                      $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
+
+                      let continuousIndex = 1;
+                      const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
+
+                      filteredShiftEmployeeList.forEach((item) => {
+                        const departmentOptions = uniqueDepartments
+                          .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+                          .join("");
+
+                        const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
+
+                        const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+                          ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+                          : "";
+
+                        const frameOptions = item.Assign_Status == 1
+                          ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+                          : "";
+
+                        const rowBackgroundColor =
+                          item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                            item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                            ? "background-color: #A7FEA5;"
+                            : item.Status_Updated === "NoWork"
+                              ? "background-color: #FFE992;"
+                              : item.Status_Updated === "Closed"
+                                ? "background-color: rgb(250, 126, 126);"
+                                : "";
+
+                        const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+                        const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
+
+                        const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}">${item.Type}</td>
+    </tr>`;
+
+                        $("#Allocation_Table tbody").append(row);
+                        table.row.add($(row)).draw();
+                        continuousIndex++;
+                      });
+
+                      $.ajax({
+                        url: baseurl + "Work/Work_Areas",
+                        method: "POST",
+                        data: { Department: $(".Department").val() },
+                        success: function (response) {
+                          const Response_Data = JSON.parse(response);
+                          const Work_Areas = Response_Data.Work_Areas;
+
+                          $("#Allocation_Table tbody tr").each(function () {
+                            const workAreaSelect = $(this).find(".WorkArea");
+                            $.each(Work_Areas, function (_, workArea) {
+                              if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                                workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                              }
+                            });
+                          });
+                        },
+                      });
+
+                      $("#Allocation_Table tbody tr").each(function () {
+                        const $row = $(this);
+                        const Department = $row.find(".Department").val();
+                        const WorkArea = $row.find(".WorkArea").val();
+                        const JobCardNo = "";
+                        const Date = $("#Date").val();
+                        const Shift = $("#Shift").val();
+
+                        $.ajax({
+                          url: baseurl + "Work/Work_Type",
+                          method: "POST",
+                          data: { Department, WorkArea, JobCardNo, Date, Shift },
+                          success: function (response) {
+                            const Response_Data = JSON.parse(response);
+                            const Work_Type = Response_Data.Work_Type;
+                            const frameSelect = $row.find(".Frame");
+
+                            let options =
+                              "<option value=''></option>" +
+                              "<option value='Others'>Others</option>" +
+                              "<option value='Multiple Trainee'>Multiple Trainee</option>" +
+                              "<option value='Trainee'>Trainee</option>" +
+                              "<option value='NoWork'>NoWork</option>";
+
+                            const addedFrames = new Set();
+
+                            $.each(Work_Type, function (_, work) {
+                              if (work.Frame && !addedFrames.has(work.Frame)) {
+                                options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                                addedFrames.add(work.Frame);
+                              }
+                            });
+
+                            frameSelect.append(options);
+                          },
+                        });
+                      });
+
+                      $("#Allocation_Table tbody .custom-select2").select2({
+                        placeholder: "",
+                        allowClear: true,
+                        width: "150px",
+                        dropdownCssClass: "custom-select2-dropdown",
+                        containerCssClass: "custom-select2-container",
+                      });
+
                     }
-                  }
-                },
-              });
-            }
-          },
-        });
+
+                  },
+                });
+              } else {
+                $.ajax({
+                  url: baseurl + "Work/Seperated_Sub_Section",
+                  type: "POST",
+                  data: {
+                    Date: $("#Date").val(),
+                    Shift: $("#Shift").val(),
+                    Sub_Section: $("#Sub_Section").val(), // Corrected this line
+                  },
+                  success: function (response) {
+                    const Response_Data = JSON.parse(response);
+
+                    const Shift_Employee_List =
+                      Response_Data.Late_And_Extra_Employee_List;
+                    const User_Department = Response_Data.User_Department;
+
+                    const Late_And_Extra_Employee_Count = Response_Data.Late_And_Extra_Employee_Count;
+
+                    if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !== undefined) {
+                      const lateComersCount = Late_And_Extra_Employee_Count.Late_Comers;
+                      $('#unAllocatedBtn').text('Late Punched Employee : ' + lateComersCount);
+                    }
+
+                    if (Response_Data.Location_Code == 'PRECOT - A' || Response_Data.Location_Code == 'PRECOT - C' || Response_Data.Location_Code == 'PRECOT - D') {
+
+
+                      if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: 'Employee Details Not Found Please Check It...!',
+                        });
+                        $("#Allocation_Table tbody").empty();
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
+
+                      const uniqueEmpMap = new Map();
+                      Shift_Employee_List.forEach((item) => {
+                        if (item.Work_Status == 1) {
+                          if (!uniqueEmpMap.has(item.EmpNo)) {
+                            uniqueEmpMap.set(item.EmpNo, { ...item });
+                          } else {
+                            const existing = uniqueEmpMap.get(item.EmpNo);
+                            if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                              existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                            }
+                          }
+                        }
+                      });
+
+                      const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
+
+                      $("#Allocation_Table tbody").empty();
+                      table.clear().draw();
+
+                      if (filteredShiftEmployeeList.length === 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: "Shift Not Starting Details Not Found!",
+                        });
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
+
+                      $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
+
+                      let continuousIndex = 1;
+                      const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
+
+                      filteredShiftEmployeeList.forEach((item) => {
+                        let shiftLabel = "";
+                        if (item.Working_Type === "OT") {
+                          if (item.Previous_Shift === "SHIFT1") shiftLabel = "S1";
+                          else if (item.Previous_Shift === "SHIFT2") shiftLabel = "S2";
+                          else if (item.Previous_Shift === "SHIFT3") shiftLabel = "S3";
+                        }
+
+                        const departmentOptions = uniqueDepartments
+                          .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+                          .join("");
+
+                        const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
+
+                        const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+                          ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+                          : "";
+
+                        const frameOptions = item.Assign_Status == 1
+                          ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+                          : "";
+
+                        const rowBackgroundColor =
+                          item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                            item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                            ? "background-color: #A7FEA5;"
+                            : item.Status_Updated === "NoWork"
+                              ? "background-color: #FFE992;"
+                              : item.Status_Updated === "Closed"
+                                ? "background-color: rgb(250, 126, 126);"
+                                : "";
+
+                        const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+                        const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
+
+                        const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="display: none;"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+    </tr>`;
+
+                        $("#Allocation_Table tbody").append(row);
+                        table.row.add($(row)).draw();
+                        continuousIndex++;
+                      });
+
+                      $.ajax({
+                        url: baseurl + "Work/Work_Areas",
+                        method: "POST",
+                        data: { Department: $(".Department").val() },
+                        success: function (response) {
+                          const Response_Data = JSON.parse(response);
+                          const Work_Areas = Response_Data.Work_Areas;
+
+                          $("#Allocation_Table tbody tr").each(function () {
+                            const workAreaSelect = $(this).find(".WorkArea");
+                            $.each(Work_Areas, function (_, workArea) {
+                              if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                                workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                              }
+                            });
+                          });
+                        },
+                      });
+
+                      $("#Allocation_Table tbody tr").each(function () {
+                        const $row = $(this);
+                        const Department = $row.find(".Department").val();
+                        const WorkArea = $row.find(".WorkArea").val();
+                        const JobCardNo = "";
+                        const Date = $("#Date").val();
+                        const Shift = $("#Shift").val();
+
+                        $.ajax({
+                          url: baseurl + "Work/Work_Type",
+                          method: "POST",
+                          data: { Department, WorkArea, JobCardNo, Date, Shift },
+                          success: function (response) {
+                            const Response_Data = JSON.parse(response);
+                            const Work_Type = Response_Data.Work_Type;
+                            const frameSelect = $row.find(".Frame");
+
+                            let options =
+                              "<option value=''></option>" +
+                              "<option value='Others'>Others</option>" +
+                              "<option value='Multiple Trainee'>Multiple Trainee</option>" +
+                              "<option value='Trainee'>Trainee</option>" +
+                              "<option value='NoWork'>NoWork</option>";
+
+                            const addedFrames = new Set();
+
+                            $.each(Work_Type, function (_, work) {
+                              if (work.Frame && !addedFrames.has(work.Frame)) {
+                                options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                                addedFrames.add(work.Frame);
+                              }
+                            });
+
+                            frameSelect.append(options);
+                          },
+                        });
+                      });
+
+                      $("#Allocation_Table tbody .custom-select2").select2({
+                        placeholder: "",
+                        allowClear: true,
+                        width: "150px",
+                        dropdownCssClass: "custom-select2-dropdown",
+                        containerCssClass: "custom-select2-container",
+                      });
+
+
+
+
+                    } else {
+
+
+                      if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: 'Employee Details Not Found Please Check It...!',
+                        });
+                        $("#Allocation_Table tbody").empty();
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
+
+                      const uniqueEmpMap = new Map();
+                      Shift_Employee_List.forEach((item) => {
+                        if (item.Work_Status == 1) {
+                          if (!uniqueEmpMap.has(item.EmpNo)) {
+                            uniqueEmpMap.set(item.EmpNo, { ...item });
+                          } else {
+                            const existing = uniqueEmpMap.get(item.EmpNo);
+                            if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                              existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                            }
+                          }
+                        }
+                      });
+
+                      const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
+
+                      $("#Allocation_Table tbody").empty();
+                      table.clear().draw();
+
+                      if (filteredShiftEmployeeList.length === 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: "Shift Not Starting Details Not Found!",
+                        });
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
+
+                      $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
+
+                      let continuousIndex = 1;
+                      const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
+
+                      filteredShiftEmployeeList.forEach((item) => {
+                        const departmentOptions = uniqueDepartments
+                          .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+                          .join("");
+
+                        const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
+
+                        const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+                          ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+                          : "";
+
+                        const frameOptions = item.Assign_Status == 1
+                          ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+                          : "";
+
+                        const rowBackgroundColor =
+                          item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                            item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                            ? "background-color: #A7FEA5;"
+                            : item.Status_Updated === "NoWork"
+                              ? "background-color: #FFE992;"
+                              : item.Status_Updated === "Closed"
+                                ? "background-color: rgb(250, 126, 126);"
+                                : "";
+
+                        const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+                        const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
+
+                        const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}">${item.Type}</td>
+    </tr>`;
+
+                        $("#Allocation_Table tbody").append(row);
+                        table.row.add($(row)).draw();
+                        continuousIndex++;
+                      });
+
+                      $.ajax({
+                        url: baseurl + "Work/Work_Areas",
+                        method: "POST",
+                        data: { Department: $(".Department").val() },
+                        success: function (response) {
+                          const Response_Data = JSON.parse(response);
+                          const Work_Areas = Response_Data.Work_Areas;
+
+                          $("#Allocation_Table tbody tr").each(function () {
+                            const workAreaSelect = $(this).find(".WorkArea");
+                            $.each(Work_Areas, function (_, workArea) {
+                              if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                                workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                              }
+                            });
+                          });
+                        },
+                      });
+
+                      $("#Allocation_Table tbody tr").each(function () {
+                        const $row = $(this);
+                        const Department = $row.find(".Department").val();
+                        const WorkArea = $row.find(".WorkArea").val();
+                        const JobCardNo = "";
+                        const Date = $("#Date").val();
+                        const Shift = $("#Shift").val();
+
+                        $.ajax({
+                          url: baseurl + "Work/Work_Type",
+                          method: "POST",
+                          data: { Department, WorkArea, JobCardNo, Date, Shift },
+                          success: function (response) {
+                            const Response_Data = JSON.parse(response);
+                            const Work_Type = Response_Data.Work_Type;
+                            const frameSelect = $row.find(".Frame");
+
+                            let options =
+                              "<option value=''></option>" +
+                              "<option value='Others'>Others</option>" +
+                              "<option value='Multiple Trainee'>Multiple Trainee</option>" +
+                              "<option value='Trainee'>Trainee</option>" +
+                              "<option value='NoWork'>NoWork</option>";
+
+                            const addedFrames = new Set();
+
+                            $.each(Work_Type, function (_, work) {
+                              if (work.Frame && !addedFrames.has(work.Frame)) {
+                                options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                                addedFrames.add(work.Frame);
+                              }
+                            });
+
+                            frameSelect.append(options);
+                          },
+                        });
+                      });
+
+                      $("#Allocation_Table tbody .custom-select2").select2({
+                        placeholder: "",
+                        allowClear: true,
+                        width: "150px",
+                        dropdownCssClass: "custom-select2-dropdown",
+                        containerCssClass: "custom-select2-container",
+                      });
+
+                    }
+                  },
+                });
+              }
+            },
+          });
+
+
+
+
+        } else if (Assign_Type == 'LATE') {
+
+
+          const $row = $(this).closest("tr");
+          const Frames = $row.find(".Frame").val();
+          const FrameType = $row.find(".FrameType").val();
+          const Machine_Id = $row.find(".Machine_Id").val(); // Get the value of Machine_Id (not the jQuery object)
+          const Department = $row.find(".Department").val();
+          const JobCardNo = "";
+          const WorkArea = $row.find(".WorkArea").val();
+          const Date = $("#Date").val();
+          const Shift = $("#Shift").val();
+          const Description = $row.find(".Description").val();
+          const EmployeeId = $row.find(".Employee_Id").text();
+          const Allocation_Type = $("#Assign_Type").val();
+          const Allocation_Screen_Type = $("#Allocation_Screen_Type").val();
+          const Supervisor = $("#Supervisor_Name").val();
+
+          var allocationData = {
+            Date: Date,
+            Department: Department,
+            Shift: Shift,
+            Work_Area: WorkArea,
+            JobCardNo: JobCardNo,
+            EmployeeId: EmployeeId,
+            Machine_Id: Machine_Id, // Just the value
+            FrameType: FrameType, // Just the value
+            Frames: Frames, // Just the value
+            Description: Description,
+            Allocation_Type: Allocation_Type,
+            Allocation_Screen_Type,
+            Supervisor,
+          };
+
+          var Row_Data = {
+            Allocations: [allocationData],
+          };
+
+          $.ajax({
+            url: baseurl + "Work/Late_Extra_Save",
+            method: "POST",
+            data: JSON.stringify(Row_Data),
+            Date,
+            Shift,
+            Allocation_Type,
+            contentType: "application/json",
+            success: function (response) {
+              //  $("#Allocation_Table tbody").empty();
+              // $("#Allocation_Table_Container").hide();
+
+              var Sub_Section = $("#Sub_Section").val();
+
+              if (Sub_Section == "All") {
+                $.ajax({
+                  url: baseurl + "Work/Late_Employee_List",
+                  type: "POST",
+                  data: {
+                    Date: $("#Date").val(),
+                    Shift: $("#Shift").val(),
+                    Type: $("#Type").val(),
+                  },
+                  success: function (response) {
+
+                    var options =
+                      "<option value=''></option>" +
+                      "<option value='LATE' SELECTED>LATE</option>" +
+                      "<option value='EXTRA'>EXTRA</option>";
+
+                    $("#Assign_Type").empty();
+                    $("#Assign_Type").append(options);
+
+                    const Response_Data = JSON.parse(response);
+
+                    const Shift_Employee_List =
+                      Response_Data.Late_And_Extra_Employee_List;
+                    const User_Department = Response_Data.User_Department;
+
+                    const Late_And_Extra_Employee_Count = Response_Data.Late_And_Extra_Employee_Count;
+
+                    if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !== undefined) {
+                      const lateComersCount = Late_And_Extra_Employee_Count.Late_Comers;
+                      $('#unAllocatedBtn').text('Late Punched Employee : ' + lateComersCount);
+                    }
+
+                    if (Response_Data.Location_Code == 'PRECOT - A' || Response_Data.Location_Code == 'PRECOT - C' || Response_Data.Location_Code == 'PRECOT - D') {
+
+
+                      if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: 'Employee Details Not Found Please Check It...!',
+                        });
+                        $("#Allocation_Table tbody").empty();
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
+
+                      const uniqueEmpMap = new Map();
+                      Shift_Employee_List.forEach((item) => {
+                        if (item.Work_Status == 1) {
+                          if (!uniqueEmpMap.has(item.EmpNo)) {
+                            uniqueEmpMap.set(item.EmpNo, { ...item });
+                          } else {
+                            const existing = uniqueEmpMap.get(item.EmpNo);
+                            if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                              existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                            }
+                          }
+                        }
+                      });
+
+                      const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
+
+                      $("#Allocation_Table tbody").empty();
+                      table.clear().draw();
+
+                      if (filteredShiftEmployeeList.length === 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: "Shift Not Starting Details Not Found!",
+                        });
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
+
+                      $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
+
+                      let continuousIndex = 1;
+                      const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
+
+                      filteredShiftEmployeeList.forEach((item) => {
+                        let shiftLabel = "";
+                        if (item.Working_Type === "OT") {
+                          if (item.Previous_Shift === "SHIFT1") shiftLabel = "S1";
+                          else if (item.Previous_Shift === "SHIFT2") shiftLabel = "S2";
+                          else if (item.Previous_Shift === "SHIFT3") shiftLabel = "S3";
+                        }
+
+                        const departmentOptions = uniqueDepartments
+                          .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+                          .join("");
+
+                        const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
+
+                        const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+                          ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+                          : "";
+
+                        const frameOptions = item.Assign_Status == 1
+                          ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+                          : "";
+
+                        const rowBackgroundColor =
+                          item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                            item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                            ? "background-color: #A7FEA5;"
+                            : item.Status_Updated === "NoWork"
+                              ? "background-color: #FFE992;"
+                              : item.Status_Updated === "Closed"
+                                ? "background-color: rgb(250, 126, 126);"
+                                : "";
+
+                        const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+                        const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
+
+                        const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="display: none;"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+    </tr>`;
+
+                        $("#Allocation_Table tbody").append(row);
+                        table.row.add($(row)).draw();
+                        continuousIndex++;
+                      });
+
+                      $.ajax({
+                        url: baseurl + "Work/Work_Areas",
+                        method: "POST",
+                        data: { Department: $(".Department").val() },
+                        success: function (response) {
+                          const Response_Data = JSON.parse(response);
+                          const Work_Areas = Response_Data.Work_Areas;
+
+                          $("#Allocation_Table tbody tr").each(function () {
+                            const workAreaSelect = $(this).find(".WorkArea");
+                            $.each(Work_Areas, function (_, workArea) {
+                              if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                                workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                              }
+                            });
+                          });
+                        },
+                      });
+
+                      $("#Allocation_Table tbody tr").each(function () {
+                        const $row = $(this);
+                        const Department = $row.find(".Department").val();
+                        const WorkArea = $row.find(".WorkArea").val();
+                        const JobCardNo = "";
+                        const Date = $("#Date").val();
+                        const Shift = $("#Shift").val();
+
+                        $.ajax({
+                          url: baseurl + "Work/Work_Type",
+                          method: "POST",
+                          data: { Department, WorkArea, JobCardNo, Date, Shift },
+                          success: function (response) {
+                            const Response_Data = JSON.parse(response);
+                            const Work_Type = Response_Data.Work_Type;
+                            const frameSelect = $row.find(".Frame");
+
+                            let options =
+                              "<option value=''></option>" +
+                              "<option value='Others'>Others</option>" +
+                              "<option value='Multiple Trainee'>Multiple Trainee</option>" +
+                              "<option value='Trainee'>Trainee</option>" +
+                              "<option value='NoWork'>NoWork</option>";
+
+                            const addedFrames = new Set();
+
+                            $.each(Work_Type, function (_, work) {
+                              if (work.Frame && !addedFrames.has(work.Frame)) {
+                                options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                                addedFrames.add(work.Frame);
+                              }
+                            });
+
+                            frameSelect.append(options);
+                          },
+                        });
+                      });
+
+                      $("#Allocation_Table tbody .custom-select2").select2({
+                        placeholder: "",
+                        allowClear: true,
+                        width: "150px",
+                        dropdownCssClass: "custom-select2-dropdown",
+                        containerCssClass: "custom-select2-container",
+                      });
+
+
+
+
+                    } else {
+
+
+                      if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: 'Employee Details Not Found Please Check It...!',
+                        });
+                        $("#Allocation_Table tbody").empty();
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
+
+                      const uniqueEmpMap = new Map();
+                      Shift_Employee_List.forEach((item) => {
+                        if (item.Work_Status == 1) {
+                          if (!uniqueEmpMap.has(item.EmpNo)) {
+                            uniqueEmpMap.set(item.EmpNo, { ...item });
+                          } else {
+                            const existing = uniqueEmpMap.get(item.EmpNo);
+                            if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                              existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                            }
+                          }
+                        }
+                      });
+
+                      const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
+
+                      $("#Allocation_Table tbody").empty();
+                      table.clear().draw();
+
+                      if (filteredShiftEmployeeList.length === 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: "Shift Not Starting Details Not Found!",
+                        });
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
+
+                      $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
+
+                      let continuousIndex = 1;
+                      const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
+
+                      filteredShiftEmployeeList.forEach((item) => {
+                        const departmentOptions = uniqueDepartments
+                          .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+                          .join("");
+
+                        const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
+
+                        const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+                          ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+                          : "";
+
+                        const frameOptions = item.Assign_Status == 1
+                          ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+                          : "";
+
+                        const rowBackgroundColor =
+                          item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                            item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                            ? "background-color: #A7FEA5;"
+                            : item.Status_Updated === "NoWork"
+                              ? "background-color: #FFE992;"
+                              : item.Status_Updated === "Closed"
+                                ? "background-color: rgb(250, 126, 126);"
+                                : "";
+
+                        const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+                        const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
+
+                        const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}">${item.Type}</td>
+    </tr>`;
+
+                        $("#Allocation_Table tbody").append(row);
+                        table.row.add($(row)).draw();
+                        continuousIndex++;
+                      });
+
+                      $.ajax({
+                        url: baseurl + "Work/Work_Areas",
+                        method: "POST",
+                        data: { Department: $(".Department").val() },
+                        success: function (response) {
+                          const Response_Data = JSON.parse(response);
+                          const Work_Areas = Response_Data.Work_Areas;
+
+                          $("#Allocation_Table tbody tr").each(function () {
+                            const workAreaSelect = $(this).find(".WorkArea");
+                            $.each(Work_Areas, function (_, workArea) {
+                              if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                                workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                              }
+                            });
+                          });
+                        },
+                      });
+
+                      $("#Allocation_Table tbody tr").each(function () {
+                        const $row = $(this);
+                        const Department = $row.find(".Department").val();
+                        const WorkArea = $row.find(".WorkArea").val();
+                        const JobCardNo = "";
+                        const Date = $("#Date").val();
+                        const Shift = $("#Shift").val();
+
+                        $.ajax({
+                          url: baseurl + "Work/Work_Type",
+                          method: "POST",
+                          data: { Department, WorkArea, JobCardNo, Date, Shift },
+                          success: function (response) {
+                            const Response_Data = JSON.parse(response);
+                            const Work_Type = Response_Data.Work_Type;
+                            const frameSelect = $row.find(".Frame");
+
+                            let options =
+                              "<option value=''></option>" +
+                              "<option value='Others'>Others</option>" +
+                              "<option value='Multiple Trainee'>Multiple Trainee</option>" +
+                              "<option value='Trainee'>Trainee</option>" +
+                              "<option value='NoWork'>NoWork</option>";
+
+                            const addedFrames = new Set();
+
+                            $.each(Work_Type, function (_, work) {
+                              if (work.Frame && !addedFrames.has(work.Frame)) {
+                                options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                                addedFrames.add(work.Frame);
+                              }
+                            });
+
+                            frameSelect.append(options);
+                          },
+                        });
+                      });
+
+                      $("#Allocation_Table tbody .custom-select2").select2({
+                        placeholder: "",
+                        allowClear: true,
+                        width: "150px",
+                        dropdownCssClass: "custom-select2-dropdown",
+                        containerCssClass: "custom-select2-container",
+                      });
+
+                    }
+                  },
+                });
+              } else {
+                $.ajax({
+                  url: baseurl + "Work/Seperated_Sub_Section",
+                  type: "POST",
+                  data: {
+                    Date: $("#Date").val(),
+                    Shift: $("#Shift").val(),
+                    Sub_Section: $("#Sub_Section").val(), // Corrected this line
+                  },
+                  success: function (response) {
+                    const Response_Data = JSON.parse(response);
+
+                    const Shift_Employee_List =
+                      Response_Data.Late_And_Extra_Employee_List;
+                    const User_Department = Response_Data.User_Department;
+
+                    const Late_And_Extra_Employee_Count = Response_Data.Late_And_Extra_Employee_Count;
+
+                    if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !== undefined) {
+                      const lateComersCount = Late_And_Extra_Employee_Count.Late_Comers;
+                      $('#unAllocatedBtn').text('Late Punched Employee : ' + lateComersCount);
+                    }
+
+                    if (Response_Data.Location_Code == 'PRECOT - A' || Response_Data.Location_Code == 'PRECOT - C' || Response_Data.Location_Code == 'PRECOT - D') {
+
+
+                      if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: 'Employee Details Not Found Please Check It...!',
+                        });
+                        $("#Allocation_Table tbody").empty();
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
+
+                      const uniqueEmpMap = new Map();
+                      Shift_Employee_List.forEach((item) => {
+                        if (item.Work_Status == 1) {
+                          if (!uniqueEmpMap.has(item.EmpNo)) {
+                            uniqueEmpMap.set(item.EmpNo, { ...item });
+                          } else {
+                            const existing = uniqueEmpMap.get(item.EmpNo);
+                            if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                              existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                            }
+                          }
+                        }
+                      });
+
+                      const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
+
+                      $("#Allocation_Table tbody").empty();
+                      table.clear().draw();
+
+                      if (filteredShiftEmployeeList.length === 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: "Shift Not Starting Details Not Found!",
+                        });
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
+
+                      $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
+
+                      let continuousIndex = 1;
+                      const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
+
+                      filteredShiftEmployeeList.forEach((item) => {
+                        let shiftLabel = "";
+                        if (item.Working_Type === "OT") {
+                          if (item.Previous_Shift === "SHIFT1") shiftLabel = "S1";
+                          else if (item.Previous_Shift === "SHIFT2") shiftLabel = "S2";
+                          else if (item.Previous_Shift === "SHIFT3") shiftLabel = "S3";
+                        }
+
+                        const departmentOptions = uniqueDepartments
+                          .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+                          .join("");
+
+                        const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
+
+                        const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+                          ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+                          : "";
+
+                        const frameOptions = item.Assign_Status == 1
+                          ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+                          : "";
+
+                        const rowBackgroundColor =
+                          item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                            item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                            ? "background-color: #A7FEA5;"
+                            : item.Status_Updated === "NoWork"
+                              ? "background-color: #FFE992;"
+                              : item.Status_Updated === "Closed"
+                                ? "background-color: rgb(250, 126, 126);"
+                                : "";
+
+                        const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+                        const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
+
+                        const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="display: none;"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+    </tr>`;
+
+                        $("#Allocation_Table tbody").append(row);
+                        table.row.add($(row)).draw();
+                        continuousIndex++;
+                      });
+
+                      $.ajax({
+                        url: baseurl + "Work/Work_Areas",
+                        method: "POST",
+                        data: { Department: $(".Department").val() },
+                        success: function (response) {
+                          const Response_Data = JSON.parse(response);
+                          const Work_Areas = Response_Data.Work_Areas;
+
+                          $("#Allocation_Table tbody tr").each(function () {
+                            const workAreaSelect = $(this).find(".WorkArea");
+                            $.each(Work_Areas, function (_, workArea) {
+                              if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                                workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                              }
+                            });
+                          });
+                        },
+                      });
+
+                      $("#Allocation_Table tbody tr").each(function () {
+                        const $row = $(this);
+                        const Department = $row.find(".Department").val();
+                        const WorkArea = $row.find(".WorkArea").val();
+                        const JobCardNo = "";
+                        const Date = $("#Date").val();
+                        const Shift = $("#Shift").val();
+
+                        $.ajax({
+                          url: baseurl + "Work/Work_Type",
+                          method: "POST",
+                          data: { Department, WorkArea, JobCardNo, Date, Shift },
+                          success: function (response) {
+                            const Response_Data = JSON.parse(response);
+                            const Work_Type = Response_Data.Work_Type;
+                            const frameSelect = $row.find(".Frame");
+
+                            let options =
+                              "<option value=''></option>" +
+                              "<option value='Others'>Others</option>" +
+                              "<option value='Multiple Trainee'>Multiple Trainee</option>" +
+                              "<option value='Trainee'>Trainee</option>" +
+                              "<option value='NoWork'>NoWork</option>";
+
+                            const addedFrames = new Set();
+
+                            $.each(Work_Type, function (_, work) {
+                              if (work.Frame && !addedFrames.has(work.Frame)) {
+                                options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                                addedFrames.add(work.Frame);
+                              }
+                            });
+
+                            frameSelect.append(options);
+                          },
+                        });
+                      });
+
+                      $("#Allocation_Table tbody .custom-select2").select2({
+                        placeholder: "",
+                        allowClear: true,
+                        width: "150px",
+                        dropdownCssClass: "custom-select2-dropdown",
+                        containerCssClass: "custom-select2-container",
+                      });
+
+
+
+
+                    } else {
+
+
+                      if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: 'Employee Details Not Found Please Check It...!',
+                        });
+                        $("#Allocation_Table tbody").empty();
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
+
+                      const uniqueEmpMap = new Map();
+                      Shift_Employee_List.forEach((item) => {
+                        if (item.Work_Status == 1) {
+                          if (!uniqueEmpMap.has(item.EmpNo)) {
+                            uniqueEmpMap.set(item.EmpNo, { ...item });
+                          } else {
+                            const existing = uniqueEmpMap.get(item.EmpNo);
+                            if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                              existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                            }
+                          }
+                        }
+                      });
+
+                      const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
+
+                      $("#Allocation_Table tbody").empty();
+                      table.clear().draw();
+
+                      if (filteredShiftEmployeeList.length === 0) {
+                        swal({
+                          type: "warning",
+                          title: "Warning",
+                          text: "Shift Not Starting Details Not Found!",
+                        });
+                        $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+                        return;
+                      }
+
+                      $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
+
+                      let continuousIndex = 1;
+                      const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
+
+                      filteredShiftEmployeeList.forEach((item) => {
+                        const departmentOptions = uniqueDepartments
+                          .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+                          .join("");
+
+                        const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
+
+                        const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+                          ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+                          : "";
+
+                        const frameOptions = item.Assign_Status == 1
+                          ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+                          : "";
+
+                        const rowBackgroundColor =
+                          item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                            item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                            ? "background-color: #A7FEA5;"
+                            : item.Status_Updated === "NoWork"
+                              ? "background-color: #FFE992;"
+                              : item.Status_Updated === "Closed"
+                                ? "background-color: rgb(250, 126, 126);"
+                                : "";
+
+                        const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+                        const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
+
+                        const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}">${item.Type}</td>
+    </tr>`;
+
+                        $("#Allocation_Table tbody").append(row);
+                        table.row.add($(row)).draw();
+                        continuousIndex++;
+                      });
+
+                      $.ajax({
+                        url: baseurl + "Work/Work_Areas",
+                        method: "POST",
+                        data: { Department: $(".Department").val() },
+                        success: function (response) {
+                          const Response_Data = JSON.parse(response);
+                          const Work_Areas = Response_Data.Work_Areas;
+
+                          $("#Allocation_Table tbody tr").each(function () {
+                            const workAreaSelect = $(this).find(".WorkArea");
+                            $.each(Work_Areas, function (_, workArea) {
+                              if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                                workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                              }
+                            });
+                          });
+                        },
+                      });
+
+                      $("#Allocation_Table tbody tr").each(function () {
+                        const $row = $(this);
+                        const Department = $row.find(".Department").val();
+                        const WorkArea = $row.find(".WorkArea").val();
+                        const JobCardNo = "";
+                        const Date = $("#Date").val();
+                        const Shift = $("#Shift").val();
+
+                        $.ajax({
+                          url: baseurl + "Work/Work_Type",
+                          method: "POST",
+                          data: { Department, WorkArea, JobCardNo, Date, Shift },
+                          success: function (response) {
+                            const Response_Data = JSON.parse(response);
+                            const Work_Type = Response_Data.Work_Type;
+                            const frameSelect = $row.find(".Frame");
+
+                            let options =
+                              "<option value=''></option>" +
+                              "<option value='Others'>Others</option>" +
+                              "<option value='Multiple Trainee'>Multiple Trainee</option>" +
+                              "<option value='Trainee'>Trainee</option>" +
+                              "<option value='NoWork'>NoWork</option>";
+
+                            const addedFrames = new Set();
+
+                            $.each(Work_Type, function (_, work) {
+                              if (work.Frame && !addedFrames.has(work.Frame)) {
+                                options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                                addedFrames.add(work.Frame);
+                              }
+                            });
+
+                            frameSelect.append(options);
+                          },
+                        });
+                      });
+
+                      $("#Allocation_Table tbody .custom-select2").select2({
+                        placeholder: "",
+                        allowClear: true,
+                        width: "150px",
+                        dropdownCssClass: "custom-select2-dropdown",
+                        containerCssClass: "custom-select2-container",
+                      });
+
+                    }
+                  },
+                });
+              }
+            },
+          });
+
+
+
+
+        }
+
+
+
+
       });
     },
   });
 
 
-  $("#Date").on("change",function(){
+  $("#Date").on("change", function () {
 
 
     $.ajax({
@@ -1615,209 +2634,128 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
       },
     });
 
-	$.ajax({
-    url: baseurl + "Work/Late_Employee_List",
-    type: "POST",
-    data: {
-      Date: $("#Date").val(),
-      Shift: $("#Shift").val(),
-      Type: $("#Type").val(),
-    },
-    success: function (response) {
-      const Response_Data = JSON.parse(response);
+    $.ajax({
+      url: baseurl + "Work/Late_Employee_List",
+      type: "POST",
+      data: {
+        Date: $("#Date").val(),
+        Shift: $("#Shift").val(),
+        Type: $("#Type").val(),
+      },
+      success: function (response) {
+        const Response_Data = JSON.parse(response);
 
-      const Shift_Employee_List = Response_Data.Late_And_Extra_Employee_List;
-      const User_Department = Response_Data.User_Department;
+        const Shift_Employee_List = Response_Data.Late_And_Extra_Employee_List;
+        const User_Department = Response_Data.User_Department;
 
-      const Late_And_Extra_Employee_Count = Response_Data.Late_And_Extra_Employee_Count;
+        const Late_And_Extra_Employee_Count = Response_Data.Late_And_Extra_Employee_Count;
 
-      if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !== undefined) {
+        if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !== undefined) {
           const lateComersCount = Late_And_Extra_Employee_Count.Late_Comers;
-          $('#unAllocatedBtn').text('Late Punched Employee : '+lateComersCount);
-      }
+          $('#unAllocatedBtn').text('Late Punched Employee : ' + lateComersCount);
+        }
+
+        if (Response_Data.Location_Code == 'PRECOT - A' || Response_Data.Location_Code == 'PRECOT - C' || Response_Data.Location_Code == 'PRECOT - D') {
 
 
-      if (Shift_Employee_List.Status == "Error") {
-        swal({
-          type: "warning",
-          title: "Warning",
-          text: Shift_Employee_List.Message,
-        });
+          if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+            swal({
+              type: "warning",
+              title: "Warning",
+              text: 'Employee Details Not Found Please Check It...!',
+            });
+            $("#Allocation_Table tbody").empty();
+            $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+            return;
+          }
 
-        $("#Allocation_Table tbody").empty();
-        $(
-          "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-        ).hide();
-      } else {
-        const filteredShiftEmployeeList = Shift_Employee_List.filter(
-          (item) => item.Work_Status == 1
-        );
-
-        $("#Allocation_Table tbody").empty();
-        table.clear().draw(); // clears previous data
-
-        if (filteredShiftEmployeeList.length === 0) {
-          swal({
-            type: "warning",
-            title: "Warning",
-            text: "Shift Not Starting Details Not Found!",
-          });
-
-          $(
-            "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-          ).hide();
-        } else {
-          $(
-            "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-          ).show();
-
-          let groupedByWages = {};
-          let wageEmployeeCount = {};
-
-          filteredShiftEmployeeList.forEach((item) => {
-            const wage = item.Wages || "NULL";
-            if (!groupedByWages[wage]) {
-              groupedByWages[wage] = [];
-              wageEmployeeCount[wage] = new Set();
+          const uniqueEmpMap = new Map();
+          Shift_Employee_List.forEach((item) => {
+            if (item.Work_Status == 1) {
+              if (!uniqueEmpMap.has(item.EmpNo)) {
+                uniqueEmpMap.set(item.EmpNo, { ...item });
+              } else {
+                const existing = uniqueEmpMap.get(item.EmpNo);
+                if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                  existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                }
+              }
             }
-            groupedByWages[wage].push(item);
-            wageEmployeeCount[wage].add(item.EmpNo);
           });
 
-          const customOrder = [
-            "PERMANENT WORKER",
-            "CONTRACT WORKER",
-            "OTHER WORKER",
-            "OTHERS",
-            "POOL",
-            "ANCILLARY",
-            "LOADING",
-            "OSP",
-            "A1",
-            "A2",
-            "A3",
-            "SCHEME",
-            "STAFF",
-          ];
+          const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
 
-          let wageGroups = Object.keys(groupedByWages);
+          $("#Allocation_Table tbody").empty();
+          table.clear().draw();
 
-          wageGroups.sort((a, b) => {
-            const indexA = customOrder.indexOf(a);
-            const indexB = customOrder.indexOf(b);
+          if (filteredShiftEmployeeList.length === 0) {
+            swal({
+              type: "warning",
+              title: "Warning",
+              text: "Shift Not Starting Details Not Found!",
+            });
+            $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+            return;
+          }
 
-            if (indexA === -1 && indexB === -1) {
-              return a.localeCompare(b);
-            } else if (indexA === -1) {
-              return 1;
-            } else if (indexB === -1) {
-              return -1;
-            }
-            return indexA - indexB;
-          });
+          $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
 
           let continuousIndex = 1;
+          const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
 
-          wageGroups.forEach((wage) => {
-            const employeeCount = wageEmployeeCount[wage].size;
+          filteredShiftEmployeeList.forEach((item) => {
+            let shiftLabel = "";
+            if (item.Working_Type === "OT") {
+              if (item.Previous_Shift === "SHIFT1") shiftLabel = "S1";
+              else if (item.Previous_Shift === "SHIFT2") shiftLabel = "S2";
+              else if (item.Previous_Shift === "SHIFT3") shiftLabel = "S3";
+            }
 
-            let groupedData = {};
+            const departmentOptions = uniqueDepartments
+              .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+              .join("");
 
-            groupedByWages[wage].forEach((item) => {
-              const key = `${item.EmpNo}_${item.Sub_Department}_${item.WorkArea}_${item.Job_Card_No}`;
-              if (!groupedData[key]) {
-                groupedData[key] = { ...item, Machine_Id: [], Frame: [] };
-              }
-              groupedData[key].Machine_Id.push(item.Machine_Id);
-              groupedData[key].Frame.push(item.Frame);
-            });
+            const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
 
-            const sortedEmployees = Object.values(groupedData).sort((a, b) => {
-              const nameA = a.FirstName.toUpperCase();
-              const nameB = b.FirstName.toUpperCase();
-              return nameA.localeCompare(nameB);
-            });
+            const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+              ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+              : "";
 
-            sortedEmployees.forEach((item, index) => {
-              item.Frame = [...new Set(item.Frame)];
+            const frameOptions = item.Assign_Status == 1
+              ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+              : "";
 
-              const uniqueDepartments = [
-                ...new Set(User_Department.map((dept) => dept.Sub_Department)),
-              ];
-
-              const departmentOptions = uniqueDepartments
-                .map(
-                  (dept) =>
-                    `<option value="${dept}" ${
-                      dept === item.Sub_Department ? "selected" : ""
-                    }>${dept}</option>`
-                )
-                .join("");
-
-              const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
-              const jobCardOption = `<option value="${item.Job_Card_No}" selected>${item.Job_Card_No}</option>`;
-
-              let machineOptions = "";
-              let frameOptions = "";
-
-              if (item.Assign_Status == 1) {
-                machineOptions = item.Machine_Id.map(
-                  (machine) =>
-                    `<option value="${machine}" selected>${machine}</option>`
-                ).join("");
-
-                frameOptions = item.Frame.map(
-                  (frame) =>
-                    `<option value="${frame}" selected>${frame}</option>`
-                ).join("");
-              }
-
-              const rowBackgroundColor =
-                item.Status_Updated === "Machine" ||
-                item.Status_Updated === "Others" ||
-                item.Status_Updated === "Multiple Trainee" ||
-                item.Status_Updated === "Trainee"
-                  ? "background-color: #A7FEA5;"
-                  : item.Status_Updated === "NoWork"
+            const rowBackgroundColor =
+              item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                ? "background-color: #A7FEA5;"
+                : item.Status_Updated === "NoWork"
                   ? "background-color: #FFE992;"
                   : item.Status_Updated === "Closed"
-                  ? "background-color: rgb(250, 126, 126);"
-                  : "";
+                    ? "background-color: rgb(250, 126, 126);"
+                    : "";
 
-              const assignButtonVisibility =
-                item.Assign_Status == 1 || item.Closing_Status == "1"
-                  ? "display: none;"
-                  : "display: inline;";
-              const editButtonVisibility =
-                item.Assign_Status == 1 && item.Closing_Status != "1"
-                  ? "display: inline;"
-                  : "display: none;";
+            const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+            const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
 
-              const row = `<tr>
-                    <td style="${rowBackgroundColor}">${continuousIndex}</td>
-                    <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
-                    <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
-                    <td style="${rowBackgroundColor}" class="Employee_Id" value="${
-                item.EmpNo
-              }">${item.EmpNo}</td>
-                    <td style="${rowBackgroundColor}">${item.FirstName}</td>
-                    <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px; line-height: 1.2; text-align: center;">${frameOptions}</select></td>
-                    <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px; line-height: 1.2; text-align: center;">${
-                machineOptions || ""
-              }</select></td>
-                    <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${
-                item.Description || ""
-              }" style="width: 200px; text-align: center;"></td>
-                    <td>
-                        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
-                        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
-                    </td>
-                </tr>`;
+            const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="display: none;"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+    </tr>`;
 
-              $("#Allocation_Table tbody").append(row);
-              continuousIndex++;
-              table.row.add($(row)).draw();
-            });
+            $("#Allocation_Table tbody").append(row);
+            table.row.add($(row)).draw();
+            continuousIndex++;
           });
 
           $.ajax({
@@ -1830,10 +2768,10 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
 
               $("#Allocation_Table tbody tr").each(function () {
                 const workAreaSelect = $(this).find(".WorkArea");
-                $.each(Work_Areas, function (index, workArea) {
-                  workAreaSelect.append(
-                    `<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`
-                  );
+                $.each(Work_Areas, function (_, workArea) {
+                  if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                    workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                  }
                 });
               });
             },
@@ -1843,7 +2781,7 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
             const $row = $(this);
             const Department = $row.find(".Department").val();
             const WorkArea = $row.find(".WorkArea").val();
-            const JobCardNo = $row.find(".JobCardNo").val();
+            const JobCardNo = "";
             const Date = $("#Date").val();
             const Shift = $("#Shift").val();
 
@@ -1854,39 +2792,25 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
               success: function (response) {
                 const Response_Data = JSON.parse(response);
                 const Work_Type = Response_Data.Work_Type;
-                const machineSelect = $row.find(".Machine_Id");
                 const frameSelect = $row.find(".Frame");
 
-                var options =
+                let options =
                   "<option value=''></option>" +
                   "<option value='Others'>Others</option>" +
                   "<option value='Multiple Trainee'>Multiple Trainee</option>" +
                   "<option value='Trainee'>Trainee</option>" +
                   "<option value='NoWork'>NoWork</option>";
 
-                var machineWiseAdded = false;
-                var addedFrames = new Set(); // To track unique frames
+                const addedFrames = new Set();
 
-                if (Work_Type.length > 0) {
-                  $.each(Work_Type, function (index, work) {
-                    if (work.Frame == "" && work.Machine_Id != "") {
-                      if (!machineWiseAdded) {
-                        options +=
-                          "<option value='Machine Wise'>Machine Wise</option>";
-                        machineWiseAdded = true;
-                      }
-                    } else {
-                      // Add frame only if it's not already added (unique)
-                      if (!addedFrames.has(work.Frame)) {
-                        options += `<option value="${work.Frame}">${work.Frame}</option>`;
-                        addedFrames.add(work.Frame); // Mark the frame as added
-                      }
-                    }
-                  });
-                  frameSelect.append(options);
-                } else {
-                  frameSelect.append(options);
-                }
+                $.each(Work_Type, function (_, work) {
+                  if (work.Frame && !addedFrames.has(work.Frame)) {
+                    options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                    addedFrames.add(work.Frame);
+                  }
+                });
+
+                frameSelect.append(options);
               },
             });
           });
@@ -1898,10 +2822,175 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
             dropdownCssClass: "custom-select2-dropdown",
             containerCssClass: "custom-select2-container",
           });
+
+
+
+
+        } else {
+
+
+          if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+            swal({
+              type: "warning",
+              title: "Warning",
+              text: 'Employee Details Not Found Please Check It...!',
+            });
+            $("#Allocation_Table tbody").empty();
+            $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+            return;
+          }
+
+          const uniqueEmpMap = new Map();
+          Shift_Employee_List.forEach((item) => {
+            if (item.Work_Status == 1) {
+              if (!uniqueEmpMap.has(item.EmpNo)) {
+                uniqueEmpMap.set(item.EmpNo, { ...item });
+              } else {
+                const existing = uniqueEmpMap.get(item.EmpNo);
+                if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                  existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                }
+              }
+            }
+          });
+
+          const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
+
+          $("#Allocation_Table tbody").empty();
+          table.clear().draw();
+
+          if (filteredShiftEmployeeList.length === 0) {
+            swal({
+              type: "warning",
+              title: "Warning",
+              text: "Shift Not Starting Details Not Found!",
+            });
+            $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+            return;
+          }
+
+          $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
+
+          let continuousIndex = 1;
+          const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
+
+          filteredShiftEmployeeList.forEach((item) => {
+            const departmentOptions = uniqueDepartments
+              .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+              .join("");
+
+            const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
+
+            const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+              ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+              : "";
+
+            const frameOptions = item.Assign_Status == 1
+              ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+              : "";
+
+            const rowBackgroundColor =
+              item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                ? "background-color: #A7FEA5;"
+                : item.Status_Updated === "NoWork"
+                  ? "background-color: #FFE992;"
+                  : item.Status_Updated === "Closed"
+                    ? "background-color: rgb(250, 126, 126);"
+                    : "";
+
+            const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+            const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
+
+            const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}">${item.Type}</td>
+    </tr>`;
+
+            $("#Allocation_Table tbody").append(row);
+            table.row.add($(row)).draw();
+            continuousIndex++;
+          });
+
+          $.ajax({
+            url: baseurl + "Work/Work_Areas",
+            method: "POST",
+            data: { Department: $(".Department").val() },
+            success: function (response) {
+              const Response_Data = JSON.parse(response);
+              const Work_Areas = Response_Data.Work_Areas;
+
+              $("#Allocation_Table tbody tr").each(function () {
+                const workAreaSelect = $(this).find(".WorkArea");
+                $.each(Work_Areas, function (_, workArea) {
+                  if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                    workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                  }
+                });
+              });
+            },
+          });
+
+          $("#Allocation_Table tbody tr").each(function () {
+            const $row = $(this);
+            const Department = $row.find(".Department").val();
+            const WorkArea = $row.find(".WorkArea").val();
+            const JobCardNo = "";
+            const Date = $("#Date").val();
+            const Shift = $("#Shift").val();
+
+            $.ajax({
+              url: baseurl + "Work/Work_Type",
+              method: "POST",
+              data: { Department, WorkArea, JobCardNo, Date, Shift },
+              success: function (response) {
+                const Response_Data = JSON.parse(response);
+                const Work_Type = Response_Data.Work_Type;
+                const frameSelect = $row.find(".Frame");
+
+                let options =
+                  "<option value=''></option>" +
+                  "<option value='Others'>Others</option>" +
+                  "<option value='Multiple Trainee'>Multiple Trainee</option>" +
+                  "<option value='Trainee'>Trainee</option>" +
+                  "<option value='NoWork'>NoWork</option>";
+
+                const addedFrames = new Set();
+
+                $.each(Work_Type, function (_, work) {
+                  if (work.Frame && !addedFrames.has(work.Frame)) {
+                    options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                    addedFrames.add(work.Frame);
+                  }
+                });
+
+                frameSelect.append(options);
+              },
+            });
+          });
+
+          $("#Allocation_Table tbody .custom-select2").select2({
+            placeholder: "",
+            allowClear: true,
+            width: "150px",
+            dropdownCssClass: "custom-select2-dropdown",
+            containerCssClass: "custom-select2-container",
+          });
+
         }
-      }
-    },
-  });
+      },
+    });
 
   })
 
@@ -1962,29 +3051,42 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
         const Late_And_Extra_Employee_Count = Response_Data.Late_And_Extra_Employee_Count;
 
         if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !== undefined) {
-            const lateComersCount = Late_And_Extra_Employee_Count.Late_Comers;
-            $('#unAllocatedBtn').text('Late Punched Employee : '+lateComersCount);
+          const lateComersCount = Late_And_Extra_Employee_Count.Late_Comers;
+          $('#unAllocatedBtn').text('Late Punched Employee : ' + lateComersCount);
         }
 
+        if (Response_Data.Location_Code == 'PRECOT - A' || Response_Data.Location_Code == 'PRECOT - C' || Response_Data.Location_Code == 'PRECOT - D') {
 
-        if (Shift_Employee_List.Status == "Error") {
-          swal({
-            type: "warning",
-            title: "Warning",
-            text: Shift_Employee_List.Message,
+
+          if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+            swal({
+              type: "warning",
+              title: "Warning",
+              text: 'Employee Details Not Found Please Check It...!',
+            });
+            $("#Allocation_Table tbody").empty();
+            $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+            return;
+          }
+
+          const uniqueEmpMap = new Map();
+          Shift_Employee_List.forEach((item) => {
+            if (item.Work_Status == 1) {
+              if (!uniqueEmpMap.has(item.EmpNo)) {
+                uniqueEmpMap.set(item.EmpNo, { ...item });
+              } else {
+                const existing = uniqueEmpMap.get(item.EmpNo);
+                if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                  existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                }
+              }
+            }
           });
 
-          $("#Allocation_Table tbody").empty();
-          $(
-            "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-          ).hide();
-        } else {
-          const filteredShiftEmployeeList = Shift_Employee_List.filter(
-            (item) => item.Work_Status == 1
-          );
+          const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
 
           $("#Allocation_Table tbody").empty();
-          table.clear().draw(); // clears previous data
+          table.clear().draw();
 
           if (filteredShiftEmployeeList.length === 0) {
             swal({
@@ -1992,247 +3094,300 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
               title: "Warning",
               text: "Shift Not Starting Details Not Found!",
             });
+            $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+            return;
+          }
 
-            $(
-              "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-            ).hide();
-          } else {
-            $(
-              "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-            ).show();
+          $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
 
-            let groupedByWages = {};
-            let wageEmployeeCount = {};
+          let continuousIndex = 1;
+          const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
 
-            filteredShiftEmployeeList.forEach((item) => {
-              const wage = item.Wages || "NULL";
-              if (!groupedByWages[wage]) {
-                groupedByWages[wage] = [];
-                wageEmployeeCount[wage] = new Set();
-              }
-              groupedByWages[wage].push(item);
-              wageEmployeeCount[wage].add(item.EmpNo);
-            });
+          filteredShiftEmployeeList.forEach((item) => {
+            let shiftLabel = "";
+            if (item.Working_Type === "OT") {
+              if (item.Previous_Shift === "SHIFT1") shiftLabel = "S1";
+              else if (item.Previous_Shift === "SHIFT2") shiftLabel = "S2";
+              else if (item.Previous_Shift === "SHIFT3") shiftLabel = "S3";
+            }
 
-            const customOrder = [
-              "PERMANENT WORKER",
-              "CONTRACT WORKER",
-              "OTHER WORKER",
-              "OTHERS",
-              "POOL",
-              "ANCILLARY",
-              "LOADING",
-              "OSP",
-              "A1",
-              "A2",
-              "A3",
-              "SCHEME",
-              "STAFF",
-            ];
+            const departmentOptions = uniqueDepartments
+              .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+              .join("");
 
-            let wageGroups = Object.keys(groupedByWages);
+            const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
 
-            wageGroups.sort((a, b) => {
-              const indexA = customOrder.indexOf(a);
-              const indexB = customOrder.indexOf(b);
+            const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+              ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+              : "";
 
-              if (indexA === -1 && indexB === -1) {
-                return a.localeCompare(b);
-              } else if (indexA === -1) {
-                return 1;
-              } else if (indexB === -1) {
-                return -1;
-              }
-              return indexA - indexB;
-            });
+            const frameOptions = item.Assign_Status == 1
+              ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+              : "";
 
-            let continuousIndex = 1;
-
-            wageGroups.forEach((wage) => {
-              const employeeCount = wageEmployeeCount[wage].size;
-
-              let groupedData = {};
-
-              groupedByWages[wage].forEach((item) => {
-                const key = `${item.EmpNo}_${item.Sub_Department}_${item.WorkArea}_${item.Job_Card_No}`;
-                if (!groupedData[key]) {
-                  groupedData[key] = { ...item, Machine_Id: [], Frame: [] };
-                }
-                groupedData[key].Machine_Id.push(item.Machine_Id);
-                groupedData[key].Frame.push(item.Frame);
-              });
-
-              const sortedEmployees = Object.values(groupedData).sort(
-                (a, b) => {
-                  const nameA = a.FirstName.toUpperCase();
-                  const nameB = b.FirstName.toUpperCase();
-                  return nameA.localeCompare(nameB);
-                }
-              );
-
-              sortedEmployees.forEach((item, index) => {
-                item.Frame = [...new Set(item.Frame)];
-
-                const uniqueDepartments = [
-                  ...new Set(
-                    User_Department.map((dept) => dept.Sub_Department)
-                  ),
-                ];
-
-                const departmentOptions = uniqueDepartments
-                  .map(
-                    (dept) =>
-                      `<option value="${dept}" ${
-                        dept === item.Sub_Department ? "selected" : ""
-                      }>${dept}</option>`
-                  )
-                  .join("");
-
-                const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
-                const jobCardOption = `<option value="${item.Job_Card_No}" selected>${item.Job_Card_No}</option>`;
-
-                let machineOptions = "";
-                let frameOptions = "";
-
-                if (item.Assign_Status == 1) {
-                  machineOptions = item.Machine_Id.map(
-                    (machine) =>
-                      `<option value="${machine}" selected>${machine}</option>`
-                  ).join("");
-
-                  frameOptions = item.Frame.map(
-                    (frame) =>
-                      `<option value="${frame}" selected>${frame}</option>`
-                  ).join("");
-                }
-
-                const rowBackgroundColor =
-                  item.Status_Updated === "Machine" ||
-                  item.Status_Updated === "Others" ||
-                  item.Status_Updated === "Multiple Trainee" ||
-                  item.Status_Updated === "Trainee"
-                    ? "background-color: #A7FEA5;"
-                    : item.Status_Updated === "NoWork"
-                    ? "background-color: #FFE992;"
-                    : item.Status_Updated === "Closed"
+            const rowBackgroundColor =
+              item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                ? "background-color: #A7FEA5;"
+                : item.Status_Updated === "NoWork"
+                  ? "background-color: #FFE992;"
+                  : item.Status_Updated === "Closed"
                     ? "background-color: rgb(250, 126, 126);"
                     : "";
 
-                const assignButtonVisibility =
-                  item.Assign_Status == 1 || item.Closing_Status == "1"
-                    ? "display: none;"
-                    : "display: inline;";
-                const editButtonVisibility =
-                  item.Assign_Status == 1 && item.Closing_Status != "1"
-                    ? "display: inline;"
-                    : "display: none;";
+            const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+            const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
 
-                const row = `<tr>
-                    <td style="${rowBackgroundColor}">${continuousIndex}</td>
-                    <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
-                    <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
-                    <td style="${rowBackgroundColor}" class="Employee_Id" value="${
-                  item.EmpNo
-                }">${item.EmpNo}</td>
-                    <td style="${rowBackgroundColor}">${item.FirstName}</td>
-                    <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px; line-height: 1.2; text-align: center;">${frameOptions}</select></td>
-                    <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px; line-height: 1.2; text-align: center;">${
-                  machineOptions || ""
-                }</select></td>
-                    <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${
-                  item.Description || ""
-                }" style="width: 200px; text-align: center;"></td>
-                    <td>
-                        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
-                        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
-                    </td>
-                </tr>`;
+            const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="display: none;"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+    </tr>`;
 
-                $("#Allocation_Table tbody").append(row);
-                continuousIndex++;
-                table.row.add($(row)).draw();
+            $("#Allocation_Table tbody").append(row);
+            table.row.add($(row)).draw();
+            continuousIndex++;
+          });
+
+          $.ajax({
+            url: baseurl + "Work/Work_Areas",
+            method: "POST",
+            data: { Department: $(".Department").val() },
+            success: function (response) {
+              const Response_Data = JSON.parse(response);
+              const Work_Areas = Response_Data.Work_Areas;
+
+              $("#Allocation_Table tbody tr").each(function () {
+                const workAreaSelect = $(this).find(".WorkArea");
+                $.each(Work_Areas, function (_, workArea) {
+                  if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                    workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                  }
+                });
               });
-            });
+            },
+          });
+
+          $("#Allocation_Table tbody tr").each(function () {
+            const $row = $(this);
+            const Department = $row.find(".Department").val();
+            const WorkArea = $row.find(".WorkArea").val();
+            const JobCardNo = "";
+            const Date = $("#Date").val();
+            const Shift = $("#Shift").val();
 
             $.ajax({
-              url: baseurl + "Work/Work_Areas",
+              url: baseurl + "Work/Work_Type",
               method: "POST",
-              data: { Department: $(".Department").val() },
+              data: { Department, WorkArea, JobCardNo, Date, Shift },
               success: function (response) {
                 const Response_Data = JSON.parse(response);
-                const Work_Areas = Response_Data.Work_Areas;
+                const Work_Type = Response_Data.Work_Type;
+                const frameSelect = $row.find(".Frame");
 
-                $("#Allocation_Table tbody tr").each(function () {
-                  const workAreaSelect = $(this).find(".WorkArea");
-                  $.each(Work_Areas, function (index, workArea) {
-                    workAreaSelect.append(
-                      `<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`
-                    );
-                  });
+                let options =
+                  "<option value=''></option>" +
+                  "<option value='Others'>Others</option>" +
+                  "<option value='Multiple Trainee'>Multiple Trainee</option>" +
+                  "<option value='Trainee'>Trainee</option>" +
+                  "<option value='NoWork'>NoWork</option>";
+
+                const addedFrames = new Set();
+
+                $.each(Work_Type, function (_, work) {
+                  if (work.Frame && !addedFrames.has(work.Frame)) {
+                    options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                    addedFrames.add(work.Frame);
+                  }
                 });
+
+                frameSelect.append(options);
               },
             });
+          });
 
-            $("#Allocation_Table tbody tr").each(function () {
-              const $row = $(this);
-              const Department = $row.find(".Department").val();
-              const WorkArea = $row.find(".WorkArea").val();
-              const JobCardNo = $row.find(".JobCardNo").val();
-              const Date = $("#Date").val();
-              const Shift = $("#Shift").val();
+          $("#Allocation_Table tbody .custom-select2").select2({
+            placeholder: "",
+            allowClear: true,
+            width: "150px",
+            dropdownCssClass: "custom-select2-dropdown",
+            containerCssClass: "custom-select2-container",
+          });
 
-              $.ajax({
-                url: baseurl + "Work/Work_Type",
-                method: "POST",
-                data: { Department, WorkArea, JobCardNo, Date, Shift },
-                success: function (response) {
-                  const Response_Data = JSON.parse(response);
-                  const Work_Type = Response_Data.Work_Type;
-                  const machineSelect = $row.find(".Machine_Id");
-                  const frameSelect = $row.find(".Frame");
 
-                  var options =
-                    "<option value=''></option>" +
-                    "<option value='Others'>Others</option>" +
-                    "<option value='Multiple Trainee'>Multiple Trainee</option>" +
-                    "<option value='Trainee'>Trainee</option>" +
-                    "<option value='NoWork'>NoWork</option>";
 
-                  var machineWiseAdded = false;
-                  var addedFrames = new Set(); // To track unique frames
 
-                  if (Work_Type.length > 0) {
-                    $.each(Work_Type, function (index, work) {
-                      if (work.Frame == "" && work.Machine_Id != "") {
-                        if (!machineWiseAdded) {
-                          options +=
-                            "<option value='Machine Wise'>Machine Wise</option>";
-                          machineWiseAdded = true;
-                        }
-                      } else {
-                        // Add frame only if it's not already added (unique)
-                        if (!addedFrames.has(work.Frame)) {
-                          options += `<option value="${work.Frame}">${work.Frame}</option>`;
-                          addedFrames.add(work.Frame); // Mark the frame as added
-                        }
-                      }
-                    });
-                    frameSelect.append(options);
-                  } else {
-                    frameSelect.append(options);
-                  }
-                },
-              });
+        } else {
+
+
+          if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+            swal({
+              type: "warning",
+              title: "Warning",
+              text: 'Employee Details Not Found Please Check It...!',
             });
-
-            $("#Allocation_Table tbody .custom-select2").select2({
-              placeholder: "",
-              allowClear: true,
-              width: "150px",
-              dropdownCssClass: "custom-select2-dropdown",
-              containerCssClass: "custom-select2-container",
-            });
+            $("#Allocation_Table tbody").empty();
+            $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+            return;
           }
+
+          const uniqueEmpMap = new Map();
+          Shift_Employee_List.forEach((item) => {
+            if (item.Work_Status == 1) {
+              if (!uniqueEmpMap.has(item.EmpNo)) {
+                uniqueEmpMap.set(item.EmpNo, { ...item });
+              } else {
+                const existing = uniqueEmpMap.get(item.EmpNo);
+                if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                  existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                }
+              }
+            }
+          });
+
+          const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
+
+          $("#Allocation_Table tbody").empty();
+          table.clear().draw();
+
+          if (filteredShiftEmployeeList.length === 0) {
+            swal({
+              type: "warning",
+              title: "Warning",
+              text: "Shift Not Starting Details Not Found!",
+            });
+            $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+            return;
+          }
+
+          $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
+
+          let continuousIndex = 1;
+          const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
+
+          filteredShiftEmployeeList.forEach((item) => {
+            const departmentOptions = uniqueDepartments
+              .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+              .join("");
+
+            const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
+
+            const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+              ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+              : "";
+
+            const frameOptions = item.Assign_Status == 1
+              ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+              : "";
+
+            const rowBackgroundColor =
+              item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                ? "background-color: #A7FEA5;"
+                : item.Status_Updated === "NoWork"
+                  ? "background-color: #FFE992;"
+                  : item.Status_Updated === "Closed"
+                    ? "background-color: rgb(250, 126, 126);"
+                    : "";
+
+            const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+            const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
+
+            const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}">${item.Type}</td>
+    </tr>`;
+
+            $("#Allocation_Table tbody").append(row);
+            table.row.add($(row)).draw();
+            continuousIndex++;
+          });
+
+          $.ajax({
+            url: baseurl + "Work/Work_Areas",
+            method: "POST",
+            data: { Department: $(".Department").val() },
+            success: function (response) {
+              const Response_Data = JSON.parse(response);
+              const Work_Areas = Response_Data.Work_Areas;
+
+              $("#Allocation_Table tbody tr").each(function () {
+                const workAreaSelect = $(this).find(".WorkArea");
+                $.each(Work_Areas, function (_, workArea) {
+                  if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                    workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                  }
+                });
+              });
+            },
+          });
+
+          $("#Allocation_Table tbody tr").each(function () {
+            const $row = $(this);
+            const Department = $row.find(".Department").val();
+            const WorkArea = $row.find(".WorkArea").val();
+            const JobCardNo = "";
+            const Date = $("#Date").val();
+            const Shift = $("#Shift").val();
+
+            $.ajax({
+              url: baseurl + "Work/Work_Type",
+              method: "POST",
+              data: { Department, WorkArea, JobCardNo, Date, Shift },
+              success: function (response) {
+                const Response_Data = JSON.parse(response);
+                const Work_Type = Response_Data.Work_Type;
+                const frameSelect = $row.find(".Frame");
+
+                let options =
+                  "<option value=''></option>" +
+                  "<option value='Others'>Others</option>" +
+                  "<option value='Multiple Trainee'>Multiple Trainee</option>" +
+                  "<option value='Trainee'>Trainee</option>" +
+                  "<option value='NoWork'>NoWork</option>";
+
+                const addedFrames = new Set();
+
+                $.each(Work_Type, function (_, work) {
+                  if (work.Frame && !addedFrames.has(work.Frame)) {
+                    options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                    addedFrames.add(work.Frame);
+                  }
+                });
+
+                frameSelect.append(options);
+              },
+            });
+          });
+
+          $("#Allocation_Table tbody .custom-select2").select2({
+            placeholder: "",
+            allowClear: true,
+            width: "150px",
+            dropdownCssClass: "custom-select2-dropdown",
+            containerCssClass: "custom-select2-container",
+          });
+
         }
       },
     });
@@ -2246,215 +3401,130 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
 
     var Sub_Section = $("#Sub_Section").val();
 
-	if (Sub_Section == "All") {
+    if (Sub_Section == "All") {
 
-		$.ajax({
-      url: baseurl + "Work/Late_Employee_List",
-      type: "POST",
-      data: {
-        Date: $("#Date").val(),
-        Shift: $("#Shift").val(),
-        Type: $("#Type").val(),
-      },
-      success: function (response) {
+      $.ajax({
+        url: baseurl + "Work/Late_Employee_List",
+        type: "POST",
+        data: {
+          Date: $("#Date").val(),
+          Shift: $("#Shift").val(),
+          Type: $("#Type").val(),
+        },
+        success: function (response) {
 
-        const Response_Data = JSON.parse(response);
-        const Shift_Employee_List = Response_Data.Late_And_Extra_Employee_List;
-        const User_Department = Response_Data.User_Department;
+          const Response_Data = JSON.parse(response);
+          const Shift_Employee_List = Response_Data.Late_And_Extra_Employee_List;
+          const User_Department = Response_Data.User_Department;
 
-        const Late_And_Extra_Employee_Count = Response_Data.Late_And_Extra_Employee_Count;
+          const Late_And_Extra_Employee_Count = Response_Data.Late_And_Extra_Employee_Count;
 
-if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !== undefined) {
-    const lateComersCount = Late_And_Extra_Employee_Count.Late_Comers;
-    $('#unAllocatedBtn').text('Late Punched Employee : '+lateComersCount);
-}
+          if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !== undefined) {
+            const lateComersCount = Late_And_Extra_Employee_Count.Late_Comers;
+            $('#unAllocatedBtn').text('Late Punched Employee : ' + lateComersCount);
+          }
+
+          if (Response_Data.Location_Code == 'PRECOT - A' || Response_Data.Location_Code == 'PRECOT - C' || Response_Data.Location_Code == 'PRECOT - D') {
 
 
-        if (Shift_Employee_List.Status == "Error") {
-          swal({
-            type: "warning",
-            title: "Warning",
-            text: Shift_Employee_List.Message,
-          });
+            if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+              swal({
+                type: "warning",
+                title: "Warning",
+                text: 'Employee Details Not Found Please Check It...!',
+              });
+              $("#Allocation_Table tbody").empty();
+              $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+              return;
+            }
 
-          $("#Allocation_Table tbody").empty();
-          $(
-            "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-          ).hide();
-        } else {
-          const filteredShiftEmployeeList = Shift_Employee_List.filter(
-            (item) => item.Work_Status == 1
-          );
-
-          $("#Allocation_Table tbody").empty();
-          table.clear().draw(); // clears previous data
-
-          if (filteredShiftEmployeeList.length === 0) {
-            swal({
-              type: "warning",
-              title: "Warning",
-              text: "Shift Not Starting Details Not Found!",
-            });
-
-            $(
-              "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-            ).hide();
-          } else {
-            $(
-              "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-            ).show();
-
-            let groupedByWages = {};
-            let wageEmployeeCount = {};
-
-            filteredShiftEmployeeList.forEach((item) => {
-              const wage = item.Wages || "NULL";
-              if (!groupedByWages[wage]) {
-                groupedByWages[wage] = [];
-                wageEmployeeCount[wage] = new Set();
+            const uniqueEmpMap = new Map();
+            Shift_Employee_List.forEach((item) => {
+              if (item.Work_Status == 1) {
+                if (!uniqueEmpMap.has(item.EmpNo)) {
+                  uniqueEmpMap.set(item.EmpNo, { ...item });
+                } else {
+                  const existing = uniqueEmpMap.get(item.EmpNo);
+                  if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                    existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                  }
+                }
               }
-              groupedByWages[wage].push(item);
-              wageEmployeeCount[wage].add(item.EmpNo);
             });
 
-            const customOrder = [
-              "PERMANENT WORKER",
-              "CONTRACT WORKER",
-              "OTHER WORKER",
-              "OTHERS",
-              "POOL",
-              "ANCILLARY",
-              "LOADING",
-              "OSP",
-              "A1",
-              "A2",
-              "A3",
-              "SCHEME",
-              "STAFF",
-            ];
+            const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
 
-            let wageGroups = Object.keys(groupedByWages);
+            $("#Allocation_Table tbody").empty();
+            table.clear().draw();
 
-            wageGroups.sort((a, b) => {
-              const indexA = customOrder.indexOf(a);
-              const indexB = customOrder.indexOf(b);
+            if (filteredShiftEmployeeList.length === 0) {
+              swal({
+                type: "warning",
+                title: "Warning",
+                text: "Shift Not Starting Details Not Found!",
+              });
+              $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+              return;
+            }
 
-              if (indexA === -1 && indexB === -1) {
-                return a.localeCompare(b);
-              } else if (indexA === -1) {
-                return 1;
-              } else if (indexB === -1) {
-                return -1;
-              }
-              return indexA - indexB;
-            });
+            $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
 
             let continuousIndex = 1;
+            const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
 
-            wageGroups.forEach((wage) => {
-              const employeeCount = wageEmployeeCount[wage].size;
+            filteredShiftEmployeeList.forEach((item) => {
+              let shiftLabel = "";
+              if (item.Working_Type === "OT") {
+                if (item.Previous_Shift === "SHIFT1") shiftLabel = "S1";
+                else if (item.Previous_Shift === "SHIFT2") shiftLabel = "S2";
+                else if (item.Previous_Shift === "SHIFT3") shiftLabel = "S3";
+              }
 
-              let groupedData = {};
+              const departmentOptions = uniqueDepartments
+                .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+                .join("");
 
-              groupedByWages[wage].forEach((item) => {
-                const key = `${item.EmpNo}_${item.Sub_Department}_${item.WorkArea}_${item.Job_Card_No}`;
-                if (!groupedData[key]) {
-                  groupedData[key] = { ...item, Machine_Id: [], Frame: [] };
-                }
-                groupedData[key].Machine_Id.push(item.Machine_Id);
-                groupedData[key].Frame.push(item.Frame);
-              });
+              const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
 
-              const sortedEmployees = Object.values(groupedData).sort(
-                (a, b) => {
-                  const nameA = a.FirstName.toUpperCase();
-                  const nameB = b.FirstName.toUpperCase();
-                  return nameA.localeCompare(nameB);
-                }
-              );
+              const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+                ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+                : "";
 
-              sortedEmployees.forEach((item, index) => {
-                item.Frame = [...new Set(item.Frame)];
+              const frameOptions = item.Assign_Status == 1
+                ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+                : "";
 
-                const uniqueDepartments = [
-                  ...new Set(
-                    User_Department.map((dept) => dept.Sub_Department)
-                  ),
-                ];
-
-                const departmentOptions = uniqueDepartments
-                  .map(
-                    (dept) =>
-                      `<option value="${dept}" ${
-                        dept === item.Sub_Department ? "selected" : ""
-                      }>${dept}</option>`
-                  )
-                  .join("");
-
-                const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
-                const jobCardOption = `<option value="${item.Job_Card_No}" selected>${item.Job_Card_No}</option>`;
-
-                let machineOptions = "";
-                let frameOptions = "";
-
-                if (item.Assign_Status == 1) {
-                  machineOptions = item.Machine_Id.map(
-                    (machine) =>
-                      `<option value="${machine}" selected>${machine}</option>`
-                  ).join("");
-
-                  frameOptions = item.Frame.map(
-                    (frame) =>
-                      `<option value="${frame}" selected>${frame}</option>`
-                  ).join("");
-                }
-
-                const rowBackgroundColor =
-                  item.Status_Updated === "Machine" ||
-                  item.Status_Updated === "Others" ||
-                  item.Status_Updated === "Multiple Trainee" ||
-                  item.Status_Updated === "Trainee"
-                    ? "background-color: #A7FEA5;"
-                    : item.Status_Updated === "NoWork"
+              const rowBackgroundColor =
+                item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                  item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                  ? "background-color: #A7FEA5;"
+                  : item.Status_Updated === "NoWork"
                     ? "background-color: #FFE992;"
                     : item.Status_Updated === "Closed"
-                    ? "background-color: rgb(250, 126, 126);"
-                    : "";
+                      ? "background-color: rgb(250, 126, 126);"
+                      : "";
 
-                const assignButtonVisibility =
-                  item.Assign_Status == 1 || item.Closing_Status == "1"
-                    ? "display: none;"
-                    : "display: inline;";
-                const editButtonVisibility =
-                  item.Assign_Status == 1 && item.Closing_Status != "1"
-                    ? "display: inline;"
-                    : "display: none;";
+              const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+              const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
 
-                const row = `<tr>
-						  <td style="${rowBackgroundColor}">${continuousIndex}</td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
-						  <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${
-                  item.EmpNo
-                }</td>
-						  <td style="${rowBackgroundColor}">${item.FirstName}</td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px; line-height: 1.2; text-align: center;">${frameOptions}</select></td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px; line-height: 1.2; text-align: center;">${
-                  machineOptions || ""
-                }</select></td>
-						  <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${
-                  item.Description || ""
-                }" style="width: 200px; text-align: center;"></td>
-						  <td>
-							  <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
-							  <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
-						  </td>
-					  </tr>`;
+              const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="display: none;"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+    </tr>`;
 
-                $("#Allocation_Table tbody").append(row);
-                continuousIndex++;
-                table.row.add($(row)).draw();
-              });
+              $("#Allocation_Table tbody").append(row);
+              table.row.add($(row)).draw();
+              continuousIndex++;
             });
 
             $.ajax({
@@ -2467,10 +3537,10 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
 
                 $("#Allocation_Table tbody tr").each(function () {
                   const workAreaSelect = $(this).find(".WorkArea");
-                  $.each(Work_Areas, function (index, workArea) {
-                    workAreaSelect.append(
-                      `<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`
-                    );
+                  $.each(Work_Areas, function (_, workArea) {
+                    if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                      workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                    }
                   });
                 });
               },
@@ -2480,7 +3550,7 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
               const $row = $(this);
               const Department = $row.find(".Department").val();
               const WorkArea = $row.find(".WorkArea").val();
-              const JobCardNo = $row.find(".JobCardNo").val();
+              const JobCardNo = "";
               const Date = $("#Date").val();
               const Shift = $("#Shift").val();
 
@@ -2491,39 +3561,25 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
                 success: function (response) {
                   const Response_Data = JSON.parse(response);
                   const Work_Type = Response_Data.Work_Type;
-                  const machineSelect = $row.find(".Machine_Id");
                   const frameSelect = $row.find(".Frame");
 
-                  var options =
+                  let options =
                     "<option value=''></option>" +
                     "<option value='Others'>Others</option>" +
                     "<option value='Multiple Trainee'>Multiple Trainee</option>" +
                     "<option value='Trainee'>Trainee</option>" +
                     "<option value='NoWork'>NoWork</option>";
 
-                  var machineWiseAdded = false;
-                  var addedFrames = new Set(); // To track unique frames
+                  const addedFrames = new Set();
 
-                  if (Work_Type.length > 0) {
-                    $.each(Work_Type, function (index, work) {
-                      if (work.Frame == "" && work.Machine_Id != "") {
-                        if (!machineWiseAdded) {
-                          options +=
-                            "<option value='Machine Wise'>Machine Wise</option>";
-                          machineWiseAdded = true;
-                        }
-                      } else {
-                        // Add frame only if it's not already added (unique)
-                        if (!addedFrames.has(work.Frame)) {
-                          options += `<option value="${work.Frame}">${work.Frame}</option>`;
-                          addedFrames.add(work.Frame); // Mark the frame as added
-                        }
-                      }
-                    });
-                    frameSelect.append(options);
-                  } else {
-                    frameSelect.append(options);
-                  }
+                  $.each(Work_Type, function (_, work) {
+                    if (work.Frame && !addedFrames.has(work.Frame)) {
+                      options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                      addedFrames.add(work.Frame);
+                    }
+                  });
+
+                  frameSelect.append(options);
                 },
               });
             });
@@ -2535,223 +3591,105 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
               dropdownCssClass: "custom-select2-dropdown",
               containerCssClass: "custom-select2-container",
             });
-          }
-        }
-      },
-    });
 
 
 
-	} else {
 
-	$.ajax({
-      url: baseurl + "Work/Late_Seperated_Sub_Section",
-      type: "POST",
-      data: {
-        Date: $("#Date").val(),
-        Shift: $("#Shift").val(),
-        Sub_Section: $("#Sub_Section").val(), // Corrected this line
-      },
-      success: function (response) {
-
-        const Response_Data = JSON.parse(response);
-
-        const Shift_Employee_List = Response_Data.Seperated_Sub_Section;
-        const User_Department = Response_Data.User_Department;
-
-        const Late_And_Extra_Employee_Count = Response_Data.Late_And_Extra_Employee_Count;
-
-if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !== undefined) {
-    const lateComersCount = Late_And_Extra_Employee_Count.Late_Comers;
-    $('#unAllocatedBtn').text('Late Punched Employee : '+lateComersCount);
-}
-
-
-        if (Response_Data.status == "error") {
-          swal({
-            type: "warning",
-            title: "Warning",
-            text: Response_Data.message,
-          });
-
-          $("#Allocation_Table tbody").empty();
-          $(
-            "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-          ).hide();
-        } else {
-          const filteredShiftEmployeeList = Shift_Employee_List.filter(
-            (item) => item.Work_Status == 1
-          );
-
-          $("#Allocation_Table tbody").empty();
-          table.clear().draw(); // clears previous data
-
-          if (filteredShiftEmployeeList.length === 0) {
-            swal({
-              type: "warning",
-              title: "Warning",
-              text: "Shift Not Starting Details Not Found!",
-            });
-
-            $(
-              "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-            ).hide();
           } else {
-            $(
-              "#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details"
-            ).show();
 
-            let groupedByWages = {};
-            let wageEmployeeCount = {};
 
-            filteredShiftEmployeeList.forEach((item) => {
-              const wage = item.Wages || "NULL";
-              if (!groupedByWages[wage]) {
-                groupedByWages[wage] = [];
-                wageEmployeeCount[wage] = new Set();
+            if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+              swal({
+                type: "warning",
+                title: "Warning",
+                text: 'Employee Details Not Found Please Check It...!',
+              });
+              $("#Allocation_Table tbody").empty();
+              $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+              return;
+            }
+
+            const uniqueEmpMap = new Map();
+            Shift_Employee_List.forEach((item) => {
+              if (item.Work_Status == 1) {
+                if (!uniqueEmpMap.has(item.EmpNo)) {
+                  uniqueEmpMap.set(item.EmpNo, { ...item });
+                } else {
+                  const existing = uniqueEmpMap.get(item.EmpNo);
+                  if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                    existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                  }
+                }
               }
-              groupedByWages[wage].push(item);
-              wageEmployeeCount[wage].add(item.EmpNo);
             });
 
-            const customOrder = [
-              "PERMANENT WORKER",
-              "CONTRACT WORKER",
-              "OTHER WORKER",
-              "OTHERS",
-              "POOL",
-              "ANCILLARY",
-              "LOADING",
-              "OSP",
-              "A1",
-              "A2",
-              "A3",
-              "SCHEME",
-              "STAFF",
-            ];
+            const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
 
-            let wageGroups = Object.keys(groupedByWages);
+            $("#Allocation_Table tbody").empty();
+            table.clear().draw();
 
-            wageGroups.sort((a, b) => {
-              const indexA = customOrder.indexOf(a);
-              const indexB = customOrder.indexOf(b);
+            if (filteredShiftEmployeeList.length === 0) {
+              swal({
+                type: "warning",
+                title: "Warning",
+                text: "Shift Not Starting Details Not Found!",
+              });
+              $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+              return;
+            }
 
-              if (indexA === -1 && indexB === -1) {
-                return a.localeCompare(b);
-              } else if (indexA === -1) {
-                return 1;
-              } else if (indexB === -1) {
-                return -1;
-              }
-              return indexA - indexB;
-            });
+            $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
 
             let continuousIndex = 1;
+            const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
 
-            wageGroups.forEach((wage) => {
-              const employeeCount = wageEmployeeCount[wage].size;
+            filteredShiftEmployeeList.forEach((item) => {
+              const departmentOptions = uniqueDepartments
+                .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+                .join("");
 
-              let groupedData = {};
+              const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
 
-              groupedByWages[wage].forEach((item) => {
-                const key = `${item.EmpNo}_${item.Sub_Department}_${item.WorkArea}_${item.Job_Card_No}`;
-                if (!groupedData[key]) {
-                  groupedData[key] = { ...item, Machine_Id: [], Frame: [] };
-                }
-                groupedData[key].Machine_Id.push(item.Machine_Id);
-                groupedData[key].Frame.push(item.Frame);
-              });
+              const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+                ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+                : "";
 
-              const sortedEmployees = Object.values(groupedData).sort(
-                (a, b) => {
-                  const nameA = a.FirstName.toUpperCase();
-                  const nameB = b.FirstName.toUpperCase();
-                  return nameA.localeCompare(nameB);
-                }
-              );
+              const frameOptions = item.Assign_Status == 1
+                ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+                : "";
 
-              sortedEmployees.forEach((item, index) => {
-                item.Frame = [...new Set(item.Frame)];
-
-                const uniqueDepartments = [
-                  ...new Set(
-                    User_Department.map((dept) => dept.Sub_Department)
-                  ),
-                ];
-
-                const departmentOptions = uniqueDepartments
-                  .map(
-                    (dept) =>
-                      `<option value="${dept}" ${
-                        dept === item.Sub_Department ? "selected" : ""
-                      }>${dept}</option>`
-                  )
-                  .join("");
-
-                const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
-                const jobCardOption = `<option value="${item.Job_Card_No}" selected>${item.Job_Card_No}</option>`;
-
-                let machineOptions = "";
-                let frameOptions = "";
-
-                if (item.Assign_Status == 1) {
-                  machineOptions = item.Machine_Id.map(
-                    (machine) =>
-                      `<option value="${machine}" selected>${machine}</option>`
-                  ).join("");
-
-                  frameOptions = item.Frame.map(
-                    (frame) =>
-                      `<option value="${frame}" selected>${frame}</option>`
-                  ).join("");
-                }
-
-                const rowBackgroundColor =
-                  item.Status_Updated === "Machine" ||
-                  item.Status_Updated === "Others" ||
-                  item.Status_Updated === "Multiple Trainee" ||
-                  item.Status_Updated === "Trainee"
-                    ? "background-color: #A7FEA5;"
-                    : item.Status_Updated === "NoWork"
+              const rowBackgroundColor =
+                item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                  item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                  ? "background-color: #A7FEA5;"
+                  : item.Status_Updated === "NoWork"
                     ? "background-color: #FFE992;"
                     : item.Status_Updated === "Closed"
-                    ? "background-color: rgb(250, 126, 126);"
-                    : "";
+                      ? "background-color: rgb(250, 126, 126);"
+                      : "";
 
-                const assignButtonVisibility =
-                  item.Assign_Status == 1 || item.Closing_Status == "1"
-                    ? "display: none;"
-                    : "display: inline;";
-                const editButtonVisibility =
-                  item.Assign_Status == 1 && item.Closing_Status != "1"
-                    ? "display: inline;"
-                    : "display: none;";
+              const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+              const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
 
-                const row = `<tr>
-						  <td style="${rowBackgroundColor}">${continuousIndex}</td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
-						  <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${
-                  item.EmpNo
-                }</td>
-						  <td style="${rowBackgroundColor}">${item.FirstName}</td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px; line-height: 1.2; text-align: center;">${frameOptions}</select></td>
-						  <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px; line-height: 1.2; text-align: center;">${
-                  machineOptions || ""
-                }</select></td>
-						  <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${
-                  item.Description || ""
-                }" style="width: 200px; text-align: center;"></td>
-						  <td>
-							  <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
-							  <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
-						  </td>
-					  </tr>`;
+              const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}">${item.Type}</td>
+    </tr>`;
 
-                $("#Allocation_Table tbody").append(row);
-                continuousIndex++;
-                table.row.add($(row)).draw();
-              });
+              $("#Allocation_Table tbody").append(row);
+              table.row.add($(row)).draw();
+              continuousIndex++;
             });
 
             $.ajax({
@@ -2764,10 +3702,10 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
 
                 $("#Allocation_Table tbody tr").each(function () {
                   const workAreaSelect = $(this).find(".WorkArea");
-                  $.each(Work_Areas, function (index, workArea) {
-                    workAreaSelect.append(
-                      `<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`
-                    );
+                  $.each(Work_Areas, function (_, workArea) {
+                    if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                      workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                    }
                   });
                 });
               },
@@ -2777,7 +3715,7 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
               const $row = $(this);
               const Department = $row.find(".Department").val();
               const WorkArea = $row.find(".WorkArea").val();
-              const JobCardNo = $row.find(".JobCardNo").val();
+              const JobCardNo = "";
               const Date = $("#Date").val();
               const Shift = $("#Shift").val();
 
@@ -2788,39 +3726,25 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
                 success: function (response) {
                   const Response_Data = JSON.parse(response);
                   const Work_Type = Response_Data.Work_Type;
-                  const machineSelect = $row.find(".Machine_Id");
                   const frameSelect = $row.find(".Frame");
 
-                  var options =
+                  let options =
                     "<option value=''></option>" +
                     "<option value='Others'>Others</option>" +
                     "<option value='Multiple Trainee'>Multiple Trainee</option>" +
                     "<option value='Trainee'>Trainee</option>" +
                     "<option value='NoWork'>NoWork</option>";
 
-                  var machineWiseAdded = false;
-                  var addedFrames = new Set(); // To track unique frames
+                  const addedFrames = new Set();
 
-                  if (Work_Type.length > 0) {
-                    $.each(Work_Type, function (index, work) {
-                      if (work.Frame == "" && work.Machine_Id != "") {
-                        if (!machineWiseAdded) {
-                          options +=
-                            "<option value='Machine Wise'>Machine Wise</option>";
-                          machineWiseAdded = true;
-                        }
-                      } else {
-                        // Add frame only if it's not already added (unique)
-                        if (!addedFrames.has(work.Frame)) {
-                          options += `<option value="${work.Frame}">${work.Frame}</option>`;
-                          addedFrames.add(work.Frame); // Mark the frame as added
-                        }
-                      }
-                    });
-                    frameSelect.append(options);
-                  } else {
-                    frameSelect.append(options);
-                  }
+                  $.each(Work_Type, function (_, work) {
+                    if (work.Frame && !addedFrames.has(work.Frame)) {
+                      options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                      addedFrames.add(work.Frame);
+                    }
+                  });
+
+                  frameSelect.append(options);
                 },
               });
             });
@@ -2832,12 +3756,375 @@ if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !
               dropdownCssClass: "custom-select2-dropdown",
               containerCssClass: "custom-select2-container",
             });
-          }
-        }
-      },
-    });
 
-	}
+          }
+        },
+      });
+
+
+
+    } else {
+
+      $.ajax({
+        url: baseurl + "Work/Late_Seperated_Sub_Section",
+        type: "POST",
+        data: {
+          Date: $("#Date").val(),
+          Shift: $("#Shift").val(),
+          Sub_Section: $("#Sub_Section").val(), // Corrected this line
+        },
+        success: function (response) {
+
+          const Response_Data = JSON.parse(response);
+
+          const Shift_Employee_List = Response_Data.Seperated_Sub_Section;
+          const User_Department = Response_Data.User_Department;
+
+          const Late_And_Extra_Employee_Count = Response_Data.Late_And_Extra_Employee_Count;
+
+          if (Late_And_Extra_Employee_Count && Late_And_Extra_Employee_Count.Late_Comers !== undefined) {
+            const lateComersCount = Late_And_Extra_Employee_Count.Late_Comers;
+            $('#unAllocatedBtn').text('Late Punched Employee : ' + lateComersCount);
+          }
+
+          if (Response_Data.Location_Code == 'PRECOT - A' || Response_Data.Location_Code == 'PRECOT - C' || Response_Data.Location_Code == 'PRECOT - D') {
+
+
+            if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+              swal({
+                type: "warning",
+                title: "Warning",
+                text: 'Employee Details Not Found Please Check It...!',
+              });
+              $("#Allocation_Table tbody").empty();
+              $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+              return;
+            }
+
+            const uniqueEmpMap = new Map();
+            Shift_Employee_List.forEach((item) => {
+              if (item.Work_Status == 1) {
+                if (!uniqueEmpMap.has(item.EmpNo)) {
+                  uniqueEmpMap.set(item.EmpNo, { ...item });
+                } else {
+                  const existing = uniqueEmpMap.get(item.EmpNo);
+                  if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                    existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                  }
+                }
+              }
+            });
+
+            const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
+
+            $("#Allocation_Table tbody").empty();
+            table.clear().draw();
+
+            if (filteredShiftEmployeeList.length === 0) {
+              swal({
+                type: "warning",
+                title: "Warning",
+                text: "Shift Not Starting Details Not Found!",
+              });
+              $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+              return;
+            }
+
+            $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
+
+            let continuousIndex = 1;
+            const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
+
+            filteredShiftEmployeeList.forEach((item) => {
+              let shiftLabel = "";
+              if (item.Working_Type === "OT") {
+                if (item.Previous_Shift === "SHIFT1") shiftLabel = "S1";
+                else if (item.Previous_Shift === "SHIFT2") shiftLabel = "S2";
+                else if (item.Previous_Shift === "SHIFT3") shiftLabel = "S3";
+              }
+
+              const departmentOptions = uniqueDepartments
+                .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+                .join("");
+
+              const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
+
+              const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+                ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+                : "";
+
+              const frameOptions = item.Assign_Status == 1
+                ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+                : "";
+
+              const rowBackgroundColor =
+                item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                  item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                  ? "background-color: #A7FEA5;"
+                  : item.Status_Updated === "NoWork"
+                    ? "background-color: #FFE992;"
+                    : item.Status_Updated === "Closed"
+                      ? "background-color: rgb(250, 126, 126);"
+                      : "";
+
+              const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+              const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
+
+              const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="display: none;"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+    </tr>`;
+
+              $("#Allocation_Table tbody").append(row);
+              table.row.add($(row)).draw();
+              continuousIndex++;
+            });
+
+            $.ajax({
+              url: baseurl + "Work/Work_Areas",
+              method: "POST",
+              data: { Department: $(".Department").val() },
+              success: function (response) {
+                const Response_Data = JSON.parse(response);
+                const Work_Areas = Response_Data.Work_Areas;
+
+                $("#Allocation_Table tbody tr").each(function () {
+                  const workAreaSelect = $(this).find(".WorkArea");
+                  $.each(Work_Areas, function (_, workArea) {
+                    if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                      workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                    }
+                  });
+                });
+              },
+            });
+
+            $("#Allocation_Table tbody tr").each(function () {
+              const $row = $(this);
+              const Department = $row.find(".Department").val();
+              const WorkArea = $row.find(".WorkArea").val();
+              const JobCardNo = "";
+              const Date = $("#Date").val();
+              const Shift = $("#Shift").val();
+
+              $.ajax({
+                url: baseurl + "Work/Work_Type",
+                method: "POST",
+                data: { Department, WorkArea, JobCardNo, Date, Shift },
+                success: function (response) {
+                  const Response_Data = JSON.parse(response);
+                  const Work_Type = Response_Data.Work_Type;
+                  const frameSelect = $row.find(".Frame");
+
+                  let options =
+                    "<option value=''></option>" +
+                    "<option value='Others'>Others</option>" +
+                    "<option value='Multiple Trainee'>Multiple Trainee</option>" +
+                    "<option value='Trainee'>Trainee</option>" +
+                    "<option value='NoWork'>NoWork</option>";
+
+                  const addedFrames = new Set();
+
+                  $.each(Work_Type, function (_, work) {
+                    if (work.Frame && !addedFrames.has(work.Frame)) {
+                      options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                      addedFrames.add(work.Frame);
+                    }
+                  });
+
+                  frameSelect.append(options);
+                },
+              });
+            });
+
+            $("#Allocation_Table tbody .custom-select2").select2({
+              placeholder: "",
+              allowClear: true,
+              width: "150px",
+              dropdownCssClass: "custom-select2-dropdown",
+              containerCssClass: "custom-select2-container",
+            });
+
+
+
+
+          } else {
+
+
+            if (Shift_Employee_List.Status === "Error" || Shift_Employee_List == 0) {
+              swal({
+                type: "warning",
+                title: "Warning",
+                text: 'Employee Details Not Found Please Check It...!',
+              });
+              $("#Allocation_Table tbody").empty();
+              $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+              return;
+            }
+
+            const uniqueEmpMap = new Map();
+            Shift_Employee_List.forEach((item) => {
+              if (item.Work_Status == 1) {
+                if (!uniqueEmpMap.has(item.EmpNo)) {
+                  uniqueEmpMap.set(item.EmpNo, { ...item });
+                } else {
+                  const existing = uniqueEmpMap.get(item.EmpNo);
+                  if (Array.isArray(existing.Machine_Id) && Array.isArray(item.Machine_Id)) {
+                    existing.Machine_Id = Array.from(new Set([...existing.Machine_Id, ...item.Machine_Id]));
+                  }
+                }
+              }
+            });
+
+            const filteredShiftEmployeeList = Array.from(uniqueEmpMap.values());
+
+            $("#Allocation_Table tbody").empty();
+            table.clear().draw();
+
+            if (filteredShiftEmployeeList.length === 0) {
+              swal({
+                type: "warning",
+                title: "Warning",
+                text: "Shift Not Starting Details Not Found!",
+              });
+              $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").hide();
+              return;
+            }
+
+            $("#Allocation_Table_Container, #Previous-Date-Allocation, #Allocation_Details_Color_Details").show();
+
+            let continuousIndex = 1;
+            const uniqueDepartments = [...new Set(User_Department.map((dept) => dept.Sub_Department))];
+
+            filteredShiftEmployeeList.forEach((item) => {
+              const departmentOptions = uniqueDepartments
+                .map((dept) => `<option value="${dept}" ${dept === item.Sub_Department ? "selected" : ""}>${dept}</option>`)
+                .join("");
+
+              const workAreaOption = `<option value="${item.WorkArea}" selected>${item.WorkArea}</option>`;
+
+              const machineOptions = item.Assign_Status == 1 && Array.isArray(item.Machine_Id)
+                ? item.Machine_Id.map((machine) => `<option value="${machine}" selected>${machine}</option>`).join("")
+                : "";
+
+              const frameOptions = item.Assign_Status == 1
+                ? `<option value="${item.Frame}" selected>${item.Frame}</option>`
+                : "";
+
+              const rowBackgroundColor =
+                item.Status_Updated === "Machine" || item.Status_Updated === "Others" ||
+                  item.Status_Updated === "Multiple Trainee" || item.Status_Updated === "Trainee"
+                  ? "background-color: #A7FEA5;"
+                  : item.Status_Updated === "NoWork"
+                    ? "background-color: #FFE992;"
+                    : item.Status_Updated === "Closed"
+                      ? "background-color: rgb(250, 126, 126);"
+                      : "";
+
+              const assignButtonVisibility = item.Assign_Status == 1 || item.Closing_Status == "1" ? "display: none;" : "display: inline;";
+              const editButtonVisibility = item.Assign_Status == 1 && item.Closing_Status != "1" ? "display: inline;" : "display: none;";
+
+              const row = `<tr>
+      <td style="${rowBackgroundColor}">${continuousIndex}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Department form-control-sm' id='Department${continuousIndex}'>${departmentOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control WorkArea form-control-sm' id='WorkArea${continuousIndex}'>${workAreaOption}</select></td>
+      <td style="${rowBackgroundColor}" class="Employee_Id" value="${item.EmpNo}">${item.EmpNo}</td>
+      <td style="${rowBackgroundColor}">${item.FirstName}</td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Frame form-control-sm' multiple="multiple" id='Frame${continuousIndex}' style="width: 150px;">${frameOptions}</select></td>
+      <td style="${rowBackgroundColor}"><select class='custom-select2 form-control Machine_Id form-control-sm' multiple="multiple" id='Machine_Id${continuousIndex}' style="width: 150px;">${machineOptions}</select></td>
+      <td style="${rowBackgroundColor}"><input type="text" class='form-control Description form-control-sm' id='Description${continuousIndex}' value="${item.Description || ''}" style="width: 200px;"></td>
+      <td>
+        <button type="button" class='button btn-info Assign-btn form-control-sm' id='Assign-btn${continuousIndex}' style="${assignButtonVisibility}">Assign</button>
+        <button type="button" class='button btn-warning Edit-btn form-control-sm' id='Edit-btn${continuousIndex}' style="${editButtonVisibility}">Edit</button>
+      </td>
+      <td style="${rowBackgroundColor}">${item.Type}</td>
+    </tr>`;
+
+              $("#Allocation_Table tbody").append(row);
+              table.row.add($(row)).draw();
+              continuousIndex++;
+            });
+
+            $.ajax({
+              url: baseurl + "Work/Work_Areas",
+              method: "POST",
+              data: { Department: $(".Department").val() },
+              success: function (response) {
+                const Response_Data = JSON.parse(response);
+                const Work_Areas = Response_Data.Work_Areas;
+
+                $("#Allocation_Table tbody tr").each(function () {
+                  const workAreaSelect = $(this).find(".WorkArea");
+                  $.each(Work_Areas, function (_, workArea) {
+                    if (!workAreaSelect.find(`option[value="${workArea.WorkArea}"]`).length) {
+                      workAreaSelect.append(`<option value="${workArea.WorkArea}">${workArea.WorkArea}</option>`);
+                    }
+                  });
+                });
+              },
+            });
+
+            $("#Allocation_Table tbody tr").each(function () {
+              const $row = $(this);
+              const Department = $row.find(".Department").val();
+              const WorkArea = $row.find(".WorkArea").val();
+              const JobCardNo = "";
+              const Date = $("#Date").val();
+              const Shift = $("#Shift").val();
+
+              $.ajax({
+                url: baseurl + "Work/Work_Type",
+                method: "POST",
+                data: { Department, WorkArea, JobCardNo, Date, Shift },
+                success: function (response) {
+                  const Response_Data = JSON.parse(response);
+                  const Work_Type = Response_Data.Work_Type;
+                  const frameSelect = $row.find(".Frame");
+
+                  let options =
+                    "<option value=''></option>" +
+                    "<option value='Others'>Others</option>" +
+                    "<option value='Multiple Trainee'>Multiple Trainee</option>" +
+                    "<option value='Trainee'>Trainee</option>" +
+                    "<option value='NoWork'>NoWork</option>";
+
+                  const addedFrames = new Set();
+
+                  $.each(Work_Type, function (_, work) {
+                    if (work.Frame && !addedFrames.has(work.Frame)) {
+                      options += `<option value="${work.Frame}">${work.Frame}</option>`;
+                      addedFrames.add(work.Frame);
+                    }
+                  });
+
+                  frameSelect.append(options);
+                },
+              });
+            });
+
+            $("#Allocation_Table tbody .custom-select2").select2({
+              placeholder: "",
+              allowClear: true,
+              width: "150px",
+              dropdownCssClass: "custom-select2-dropdown",
+              containerCssClass: "custom-select2-container",
+            });
+
+          }
+        },
+      });
+
+    }
 
 
   });

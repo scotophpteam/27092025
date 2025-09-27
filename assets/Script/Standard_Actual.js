@@ -277,9 +277,9 @@ $(document).ready(function () {
       }
     })
 
-    $("#Shift").on("change", function () {
 
 
+        $("#Shift").on("change", function () {
       $.ajax({
         url: baseurl + "Master/Sub_Section_Employee_Count",
         type: "POST",
@@ -319,139 +319,211 @@ $(document).ready(function () {
           $("#Sub_Division_Wise_Employee_List tbody").append(totalRow);
 
 
+
+        $.ajax({
+          url: baseurl + "Master/Employee_Home_Page",
+          type: "POST",
+          data: {
+              Date: $("#Date").val(),
+              Shift: $("#Shift").val()
+          },
+          success: function (data) {
+
+            const responseData = JSON.parse(data);
+
+            const homeData = responseData.Employee_Home_Page;
+
+            const actualComers = parseInt(homeData.Actual_Comers) || 0;
+            const lateComers = parseInt(homeData.Late_Comers) || 0;
+            const totalAllocated = parseInt(homeData.Total_Allocated_Count) || 0;
+            const lateAllocated = parseInt(homeData.Late_Total_Allocated_Count) || 0;
+            const totalEngaged = actualComers + lateComers;
+
+            // Hide chart if all values are zero
+            if (actualComers === 0 && lateComers === 0 && totalAllocated === 0 && lateAllocated === 0) {
+                $("#Chart_View_Employee_Count").hide();
+                return;
+            }
+
+            $("#Chart_View_Employee_Count").show();
+
+            const engagementData = [
+                actualComers,
+                totalEngaged,
+                lateComers,
+                totalAllocated,
+                lateAllocated
+            ];
+
+            const engagementLabels = [
+                'Total Punched Employee',
+                'Total Engaged Employee',
+                'Total Late Punched Employee',
+                'Total Allocated Employee',
+                'Allocated Late Employee'
+            ];
+
+            const dataForChart = {
+                labels: engagementLabels,
+                datasets: [{
+                    label: 'Employee Counts',
+                    data: engagementData,
+                    backgroundColor: [
+                        'rgb(43, 255, 0)',      // Green
+                        'rgb(4, 0, 255)',       // Blue
+                        'rgba(255, 0, 0, 0.8)', // Red
+                        'rgb(255, 165, 0)',     // Orange
+                        'rgb(128, 0, 128)'      // Purple
+                    ],
+                    borderColor: [
+                        'rgb(43, 255, 0)',
+                        'rgb(4, 0, 255)',
+                        'rgba(255, 0, 0, 0.8)',
+                        'rgb(255, 165, 0)',
+                        'rgb(128, 0, 128)'
+                    ],
+                    borderWidth: 1
+                }]
+            };
+
+            const options = {
+                responsive: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return `${context.label}: ${context.raw}`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        color: '#000',
+                        font: {
+                            weight: 'bold',
+                            size: 8
+                        },
+                        formatter: function (value, context) {
+                            const label = context.chart.data.labels[context.dataIndex];
+                            return `${label}: ${value}`;
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            font: {
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'No. of Employees'
+                        }
+                    }
+                }
+            };
+
+            const ctx = document.getElementById('myBarChart').getContext('2d');
+
+            if (window.myBarChart instanceof Chart) {
+                window.myBarChart.destroy();
+            }
+
+            window.myBarChart = new Chart(ctx, {
+                type: 'bar',
+                data: dataForChart,
+                options: options,
+                plugins: [ChartDataLabels]
+            });
+        }
+        ,
+
+
+          error: function () {
+              console.error("Failed to fetch data from server.");
+          }
+      });
+
+
+
+          var Selected_Date = $("#Date").val();
+          var Shift = $("#Shift").val();
+
           $.ajax({
-            url: baseurl + "Master/Employee_Home_Page",
+            url: baseurl + "Master/Standard_Actual_List",
             type: "POST",
             data: {
-                Date: $("#Date").val(),
-                Shift: $("#Shift").val()
+              Date: Selected_Date,
+              Shift,
             },
-            success: function (data) {
+            success: function (response) {
+              var Response_Data = JSON.parse(response);
+              var Standard_Actual_List = Response_Data.Standard_Actual_List;
 
-              const responseData = JSON.parse(data);
+              $("#Standard_Actual_Table_Section").show();
+              $("#Standard_Actual_Table tbody").empty();
+              let totalStandard = 0;
+              let totalActual = 0;
 
-              const homeData = responseData.Employee_Home_Page;
+              $.each(Standard_Actual_List, function (index, item) {
+                totalStandard += parseFloat(item.Standard) || 0;
+                totalActual += parseFloat(item.Actual) || 0;
 
-              const actualComers = parseInt(homeData.Actual_Comers) || 0;
-              const lateComers = parseInt(homeData.Late_Comers) || 0;
-              const totalAllocated = parseInt(homeData.Total_Allocated_Count) || 0;
-              const lateAllocated = parseInt(homeData.Late_Total_Allocated_Count) || 0;
-              const totalEngaged = actualComers + lateComers;
-
-              // Hide chart if all values are zero
-              if (actualComers === 0 && lateComers === 0 && totalAllocated === 0 && lateAllocated === 0) {
-                  $("#Chart_View_Employee_Count").hide();
-                  return;
-              }
-
-              $("#Chart_View_Employee_Count").show();
-
-              const engagementData = [
-                  actualComers,
-                  totalEngaged,
-                  lateComers,
-                  totalAllocated,
-                  lateAllocated
-              ];
-
-              const engagementLabels = [
-                  'Total Punched Employee',
-                  'Total Engaged Employee',
-                  'Total Late Punched Employee',
-                  'Total Allocated Employee',
-                  'Allocated Late Employee'
-              ];
-
-              const dataForChart = {
-                  labels: engagementLabels,
-                  datasets: [{
-                      label: 'Employee Counts',
-                      data: engagementData,
-                      backgroundColor: [
-                          'rgb(43, 255, 0)',      // Green
-                          'rgb(4, 0, 255)',       // Blue
-                          'rgba(255, 0, 0, 0.8)', // Red
-                          'rgb(255, 165, 0)',     // Orange
-                          'rgb(128, 0, 128)'      // Purple
-                      ],
-                      borderColor: [
-                          'rgb(43, 255, 0)',
-                          'rgb(4, 0, 255)',
-                          'rgba(255, 0, 0, 0.8)',
-                          'rgb(255, 165, 0)',
-                          'rgb(128, 0, 128)'
-                      ],
-                      borderWidth: 1
-                  }]
-              };
-
-              const options = {
-                  responsive: true,
-                  plugins: {
-                      tooltip: {
-                          callbacks: {
-                              label: function (context) {
-                                  return `${context.label}: ${context.raw}`;
+                var row = `
+                      <tr>
+                       <td>${index + 1}</td>
+                            <td>${item.Position}</td>
+                            <td>${item.Standard}</td>
+                            <td>${item.Actual}</td>
+                          <td>
+                              ${
+                                item.Status === "Active"
+                                  ? `<span style="color: white; background: green; padding: 3px 8px; border-radius: 4px;">${item.Status}</span>`
+                                  : item.Status
                               }
-                          }
-                      },
-                      datalabels: {
-                          anchor: 'end',
-                          align: 'end',
-                          color: '#000',
-                          font: {
-                              weight: 'bold',
-                              size: 8
-                          },
-                          formatter: function (value, context) {
-                              const label = context.chart.data.labels[context.dataIndex];
-                              return `${label}: ${value}`;
-                          }
-                      }
-                  },
-                  scales: {
-                      x: {
-                          ticks: {
-                              font: {
-                                  weight: 'bold'
-                              }
-                          }
-                      },
-                      y: {
-                          beginAtZero: true,
-                          title: {
-                              display: true,
-                              text: 'No. of Employees'
-                          }
-                      }
-                  }
-              };
-
-              const ctx = document.getElementById('myBarChart').getContext('2d');
-
-              if (window.myBarChart instanceof Chart) {
-                  window.myBarChart.destroy();
-              }
-
-              window.myBarChart = new Chart(ctx, {
-                  type: 'bar',
-                  data: dataForChart,
-                  options: options,
-                  plugins: [ChartDataLabels]
+                          </td>
+                      </tr>
+                  `;
+                $("#Standard_Actual_Table tbody").append(row);
               });
-          }
-          ,
+
+              // Append totals row
+              let totalRow = `
+          <tr style="background-color: rgb(147, 255, 226);">
+              <td colspan="2" class="text-right" style="font-weight: bold;">Total</td>
+              <td style="font-weight: bold;">${totalStandard}</td>
+              <td style="font-weight: bold;">${totalActual}</td>
+              <td></td>
+          </tr>
+      `;
 
 
-            error: function () {
-                console.error("Failed to fetch data from server.");
-            }
-        });
+              $("#Standard_Actual_Table tbody").append(totalRow);
+
+
+              $("#Standard_Actual_Table_Final").DataTable({
+                paging: false,
+                searching: true,
+                ordering: true,
+                info: true,
+              });
+            },
+          });
+
+
+
+
+
+
+
         },
-
       });
-    })
-
+    });
 
     $("#Date").on("change", function () {
       $.ajax({

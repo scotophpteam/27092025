@@ -248,35 +248,188 @@ class  Reports_Model extends CI_Model
     {
 
 
-        $current_Date = date('Y/m/d');
+//    if ($Type == 'EXTRA') {
 
-        $Date = '2025-01-22';
+//         // Helper to convert HH:MM to decimal hours (e.g., 4:30 -> 4.5)
+//         function convertHoursMinutesToDecimal($timeStr)
+//         {
+//             if ($timeStr == 'Invalid Time' || empty($timeStr)) {
+//                 return '0';
+//             }
 
-        $Sql = "WITH PunchTimes AS (
+//             list($hours, $minutes) = explode(':', $timeStr);
+//             $hours = intval($hours);
+//             $minutes = intval($minutes);
+
+//             if ($minutes == 0) {
+//                 return (string)$hours;
+//             } elseif ($minutes >= 15 && $minutes <= 44) {
+//                 return number_format($hours + 0.5, 1);
+//             } elseif ($minutes >= 45) {
+//                 return (string)($hours + 1);
+//             } else {
+//                 return (string)$hours;
+//             }
+//         }
+
+
+//         $current_Date = $Date; // Safe fallback for use in subqueries
+
+//         $Sql = "
+//             WITH PunchTimes AS (
+//                 SELECT
+//                     Work.EmpNo,
+//                     Work.WorkArea,
+//                     TRY_CONVERT(DATETIME, Work.Updated_Time, 120) AS Updated_Time,
+//                     Work.Closing_Status,
+//                     Work.FirstName,
+//                     Time.TimeOUT,
+//                     ROW_NUMBER() OVER (PARTITION BY Work.EmpNo ORDER BY Time.TimeOUT ASC) AS RowAsc,
+//                     ROW_NUMBER() OVER (PARTITION BY Work.EmpNo ORDER BY Time.TimeOUT DESC) AS RowDesc
+//                 FROM
+//                     Web_Extra_Work_Allocation_Mst Work
+//                 INNER JOIN
+//                     UserDetails_Det Login ON Login.Lcode = Work.Lcode
+//                         AND Login.Ccode = Work.Ccode
+//                         AND Login.Name = Work.Sub_Department
+//                 INNER JOIN
+//                     LogTimeLunch_OUT AS Time ON Time.MachineID = Work.EmpNo
+//                         AND TRY_CONVERT(DATE, Time.TimeOUT, 120) = '$Date'
+//                 WHERE
+//                     Login.UserID = '$Login_User'
+//                     AND TRY_CONVERT(DATE, Work.Date, 120) = '$Date'
+//                     AND Work.Ccode = '$CompanyCode'
+//                     AND Work.Lcode = '$LocationCode'
+//                     AND Work.Work_Status = '1'
+//                     AND Work.Assign_Status = '1'
+//                     AND (Work.Closing_Status = '1' OR Work.Closing_Status = '0')
+//             ),
+//             OnDutyStatus AS (
+//                 SELECT DISTINCT TokenNo, 1 AS Updated_Status
+//                 FROM OnDuty_Mst
+//                 WHERE TRY_CONVERT(DATE, Entry_Date, 120) = '$current_Date'
+//             )
+
+//             SELECT
+//                 p.EmpNo,
+//                 p.WorkArea,
+//                 CONVERT(VARCHAR(5), p.Updated_Time, 108) AS Updated_Time,
+//                 p.Closing_Status,
+//                 p.FirstName,
+//                 CONVERT(VARCHAR(5), MIN(p.TimeOUT), 108) AS IN_Time,
+//                 CONVERT(VARCHAR(5), MAX(p.TimeOUT), 108) AS OUT_Time,
+//                 CASE
+//                     WHEN MIN(CASE WHEN p.RowAsc = 1 THEN p.TimeOUT END) IS NOT NULL
+//                          AND MAX(CASE WHEN p.RowDesc = 1 THEN p.TimeOUT END) IS NOT NULL
+//                     THEN
+//                         CONVERT(VARCHAR(5),
+//                             DATEDIFF(SECOND,
+//                                 MIN(CASE WHEN p.RowAsc = 1 THEN p.TimeOUT END),
+//                                 MAX(CASE WHEN p.RowDesc = 1 THEN p.TimeOUT END)) / 3600
+//                         ) + ':' +
+//                         RIGHT('0' + CONVERT(VARCHAR(2),
+//                             (DATEDIFF(SECOND,
+//                                 MIN(CASE WHEN p.RowAsc = 1 THEN p.TimeOUT END),
+//                                 MAX(CASE WHEN p.RowDesc = 1 THEN p.TimeOUT END)) % 3600) / 60
+//                         ), 2)
+//                     ELSE 'Invalid Time'
+//                 END AS TotalWorkingHours,
+//                 ISNULL(ods.Updated_Status, 0) AS Updated_Status,
+//                 DATEDIFF(MINUTE, MAX(p.Updated_Time), MAX(p.TimeOUT)) AS OUT_Updated_Diff
+//             FROM
+//                 PunchTimes p
+//             LEFT JOIN
+//                 OnDutyStatus ods ON p.EmpNo = ods.TokenNo
+//             GROUP BY
+//                 p.EmpNo, p.WorkArea, p.Updated_Time, p.Closing_Status, p.FirstName, ods.Updated_Status;
+//         ";
+
+//         $Query = $this->db->query($Sql);
+
+//         if ($Query->num_rows() > 0) {
+
+//             $Result = [];
+
+//             foreach ($Query->result() as $Row) {
+
+//                 $extraHoursDecimal = convertHoursMinutesToDecimal($Row->TotalWorkingHours);
+//                 $Employee_ID = $Row->EmpNo;
+
+//                 // Check if already exists in OnDuty_Mst with Input = E-Master
+//                 $Sql_Verify = "SELECT * FROM OnDuty_Mst 
+//                                WHERE CompCode = '$CompanyCode' 
+//                                  AND LocCode = '$LocationCode' 
+//                                  AND TokenNo = '$Employee_ID' 
+//                                  AND Entry_Date = '$Date' 
+//                                  AND Input = 'E-Master'";
+//                 $Query_Verify = $this->db->query($Sql_Verify);
+//                 $Entry_Status = ($Query_Verify->num_rows() > 0) ? '1' : '0';
+
+//                 $Result[] = [
+//                     'Employee_ID'       => $Row->EmpNo,
+//                     'Employee_Name'     => $Row->FirstName,
+//                     'IN_Time'           => $Row->IN_Time ?? '',
+//                     'OUT_Time'          => $Row->OUT_Time ?? '',
+//                     'Extra_Hours'       => $extraHoursDecimal,
+//                     'Closing_Status'    => $Row->Closing_Status,
+//                     'Updated_Time'      => $Row->Updated_Time,
+//                     'OUT_Updated_Diff'  => $Row->OUT_Updated_Diff ?? 0,
+//                     'Entry_Status'      => $Entry_Status
+//                 ];
+//             }
+
+//             return $Result;
+//         } else {
+//             return 0;
+//         }
+//     }
+
+
+ if ($Type != 'EXTRA') return 0;
+
+    // Helper function to convert HH:MM to decimal hours
+    function convertHoursMinutesToDecimal($timeStr)
+    {
+        if ($timeStr == 'Invalid Time' || empty($timeStr)) return '0';
+
+        list($hours, $minutes) = explode(':', $timeStr);
+        $hours = intval($hours);
+        $minutes = intval($minutes);
+
+        if ($minutes == 0) {
+            return (string)$hours;
+        } elseif ($minutes >= 15 && $minutes <= 44) {
+            return number_format($hours + 0.5, 1);
+        } elseif ($minutes >= 45) {
+            return (string)($hours + 1);
+        } else {
+            return (string)$hours;
+        }
+    }
+
+    $Sql = "WITH FirstIN AS (
+            SELECT MachineID AS EmpNo, MIN(TimeIN) AS FirstPunch
+            FROM LogTime_IN
+            WHERE TRY_CONVERT(DATE, TimeIN, 120) = '$Date'
+            GROUP BY MachineID
+        ),
+        LastOUT AS (
+            SELECT MachineID AS EmpNo, MAX(TimeOUT) AS LastPunch
+            FROM LogTime_OUT
+            WHERE TRY_CONVERT(DATE, TimeOUT, 120) = '$Date'
+            GROUP BY MachineID
+        ),
+        WorkEmployees AS (
             SELECT
                 Work.EmpNo,
                 Work.WorkArea,
-                -- Convert Updated_Time to TIME and combine with Work.Date
-                CASE
-                    WHEN TRY_CONVERT(TIME, Work.Updated_Time, 120) IS NOT NULL
-                    THEN CONVERT(DATETIME, CONVERT(VARCHAR(10), TRY_CONVERT(DATE, Work.Date, 120), 120) + ' ' + CONVERT(VARCHAR(5), TRY_CONVERT(TIME, Work.Updated_Time, 120)), 120)
-                    ELSE NULL
-                END AS Updated_Time,
+                TRY_CONVERT(DATETIME, Work.Updated_Time, 120) AS Updated_Time,
                 Work.Closing_Status,
-                Work.FirstName,
-                Time.TimeOUT,
-                ROW_NUMBER() OVER (PARTITION BY Work.EmpNo ORDER BY Time.TimeOUT ASC) AS RowAsc,
-                ROW_NUMBER() OVER (PARTITION BY Work.EmpNo ORDER BY Time.TimeOUT DESC) AS RowDesc,
-                TRY_CONVERT(DATE, Work.Date, 120) AS WorkDate
-            FROM
-                Web_Extra_Work_Allocation_Mst Work
-            INNER JOIN
-                UserDetails_Det Login ON Login.Lcode = Work.Lcode
+                Work.FirstName
+            FROM Web_Extra_Work_Allocation_Mst Work
+            INNER JOIN UserDetails_Det Login ON Login.Lcode = Work.Lcode
                 AND Login.Ccode = Work.Ccode
                 AND Login.Name = Work.Sub_Department
-            INNER JOIN
-                LogTimeLunch_OUT AS Time ON Time.MachineID = Work.EmpNo
-                AND TRY_CONVERT(DATE, Time.TimeOUT, 120) = TRY_CONVERT(DATE, Work.Date, 120)
             WHERE
                 Login.UserID = '$Login_User'
                 AND TRY_CONVERT(DATE, Work.Date, 120) = '$Date'
@@ -284,214 +437,472 @@ class  Reports_Model extends CI_Model
                 AND Work.Lcode = '$LocationCode'
                 AND Work.Work_Status = '1'
                 AND Work.Assign_Status = '1'
-                AND (Work.Closing_Status = '1' OR Work.Closing_Status = '0')
+                AND Work.Closing_Status IN ('0', '1')
         ),
         OnDutyStatus AS (
-            SELECT
-                TokenNo,
-                1 AS Updated_Status,
-                TRY_CONVERT(DATE, Entry_Date, 120) AS EntryDate
-            FROM
-                OnDuty_Mst
-            WHERE
-                TRY_CONVERT(DATE, Entry_Date, 120) = TRY_CONVERT(DATE, '$Date', 120)
-            GROUP BY
-                TokenNo,
-                TRY_CONVERT(DATE, Entry_Date, 120)
+            SELECT DISTINCT TokenNo, 1 AS Updated_Status
+            FROM OnDuty_Mst
+            WHERE TRY_CONVERT(DATE, Entry_Date, 120) = '$Date'
         )
+
         SELECT
-            p.EmpNo,
-            p.WorkArea,
-            CONVERT(VARCHAR(10), p.WorkDate, 120) AS WorkDate,
-            CONVERT(VARCHAR(5), MAX(p.Updated_Time), 108) AS Updated_Time,
-            p.Closing_Status,
-            p.FirstName,
-            CONVERT(VARCHAR(5), MIN(p.TimeOUT), 108) AS FirstPunchIn,
-            CONVERT(VARCHAR(5), MAX(p.TimeOUT), 108) AS LastPunchOut,
+            w.EmpNo,
+            w.WorkArea,
+            CONVERT(VARCHAR(5), w.Updated_Time, 108) AS Updated_Time,
+            w.Closing_Status,
+            w.FirstName,
+            CONVERT(VARCHAR(5), f.FirstPunch, 108) AS IN_Time,
+            CONVERT(VARCHAR(5), o.LastPunch, 108) AS OUT_Time,
             CASE
-                WHEN MIN(CASE WHEN p.RowAsc = 1 THEN p.TimeOUT END) IS NOT NULL
-                     AND MAX(CASE WHEN p.RowDesc = 1 THEN p.TimeOUT END) IS NOT NULL
-                THEN
-                    CONVERT(VARCHAR(5),
-                        CEILING(DATEDIFF(MINUTE,
-                            MIN(CASE WHEN p.RowAsc = 1 THEN p.TimeOUT END),
-                            MAX(CASE WHEN p.RowDesc = 1 THEN p.TimeOUT END)) / 60.0)
-                    ) + ':00'
-                ELSE '0:00'
+                WHEN f.FirstPunch IS NOT NULL AND o.LastPunch IS NOT NULL THEN
+                    CONVERT(VARCHAR(5), DATEDIFF(SECOND, f.FirstPunch, o.LastPunch) / 3600) + ':' +
+                    RIGHT('0' + CONVERT(VARCHAR(2), (DATEDIFF(SECOND, f.FirstPunch, o.LastPunch) % 3600) / 60), 2)
+                ELSE 'Invalid Time'
             END AS TotalWorkingHours,
             ISNULL(ods.Updated_Status, 0) AS Updated_Status,
-            CASE
-                WHEN MAX(p.Updated_Time) IS NOT NULL AND MAX(p.TimeOUT) IS NOT NULL
-                THEN
-                    RIGHT('0' + CONVERT(VARCHAR(2),
-                        ABS(DATEDIFF(MINUTE, MAX(p.Updated_Time), MAX(p.TimeOUT))) / 60
-                    ), 2) + ':' +
-                    RIGHT('0' + CONVERT(VARCHAR(2),
-                        ABS(DATEDIFF(MINUTE, MAX(p.Updated_Time), MAX(p.TimeOUT))) % 60
-                    ), 2)
-                ELSE 'Invalid'
-            END AS TimeDifference
+            ISNULL(DATEDIFF(MINUTE, w.Updated_Time, o.LastPunch), 0) AS OUT_Updated_Diff
         FROM
-            PunchTimes p
-        LEFT JOIN
-            OnDutyStatus ods ON p.EmpNo = ods.TokenNo
-                AND p.WorkDate = ods.EntryDate
-        GROUP BY
-            p.EmpNo, p.WorkArea, p.WorkDate, p.Closing_Status, p.FirstName, ods.Updated_Status;";
+            WorkEmployees w
+        LEFT JOIN FirstIN f ON w.EmpNo = f.EmpNo
+        LEFT JOIN LastOUT o ON w.EmpNo = o.EmpNo
+        LEFT JOIN OnDutyStatus ods ON w.EmpNo = ods.TokenNo
+    ";
 
-        $Query = $this->db->query($Sql);
+    $Query = $this->db->query($Sql);
 
-        if ($Query->num_rows() > 0) {
-            return $Query->result();
-        } else {
-            return 0;
-        }
+    if ($Query->num_rows() <= 0) return 0;
+
+    $Result = [];
+
+    foreach ($Query->result() as $Row) {
+        $extraHoursDecimal = convertHoursMinutesToDecimal($Row->TotalWorkingHours);
+        $Employee_ID = $Row->EmpNo;
+
+        // Check if already exists in OnDuty_Mst with Input = E-Master
+        $Sql_Verify = "
+            SELECT 1 FROM OnDuty_Mst 
+            WHERE CompCode = '$CompanyCode' 
+              AND LocCode = '$LocationCode' 
+              AND TokenNo = '$Employee_ID' 
+              AND Entry_Date = '$Date' 
+              AND Input = 'E-Master'
+        ";
+        $Query_Verify = $this->db->query($Sql_Verify);
+        $Entry_Status = ($Query_Verify->num_rows() > 0) ? '1' : '0';
+
+        $Result[] = [
+            'Employee_ID'       => $Row->EmpNo,
+            'Employee_Name'     => $Row->FirstName,
+            'IN_Time'           => $Row->IN_Time ?? '',
+            'OUT_Time'          => $Row->OUT_Time ?? '',
+            'Extra_Hours'       => $extraHoursDecimal,
+            'Closing_Status'    => $Row->Closing_Status,
+            'Updated_Time'      => $Row->Updated_Time,
+            'OUT_Updated_Diff'  => $Row->OUT_Updated_Diff ?? 0,
+            'Entry_Status'      => $Entry_Status
+        ];
+    }
+
+    return $Result;
+
+
     }
 
 
     public function OT_Hours_Employee_Download($CompanyCode, $LocationCode, $Login_User, $Date, $Shift, $Type)
     {
-        $Sql = "SELECT
-                Work.EmpNo,
-                Work.Closing_Status,
-                Work.FirstName,
-                Work.Updated_Time
+
+        // $Next_Shift = ($Shift === 'SHIFT1') ? 'SHIFT2' : (($Shift === 'SHIFT2') ? 'SHIFT3' : 'SHIFT1');
+
+        // $sql = "SELECT Work.EmpNo, Work.FirstName, Work.Sub_Department,Work.Updated_Time
+        //     FROM Web_Employee_Work_Allocation_Mst AS Work
+        //     INNER JOIN UserDetails_Det AS Login
+        //         ON Login.Lcode = Work.Lcode
+        //         AND Login.Name = Work.Sub_Department
+        //     WHERE Login.Ccode = '$CompanyCode'
+        //       AND Login.Lcode = '$LocationCode'
+        //       AND Login.UserID = '$Login_User'
+        //       AND Work.Date = '$Date'
+        //       AND Work.Shift = '$Next_Shift'
+        //       AND Work.Work_Status = '1'
+        //       AND Work.Assign_Status = '1'
+        //       AND Work.Closing_Status = '1'
+        //       AND Work.Working_Type = 'OT'";
+
+        // $query = $this->db->query($sql);
+        // if ($query->num_rows() === 0) return [];
+
+        // $results = [];
+        // $nextDate = (new DateTime($Date))->modify('+1 day')->format('Y-m-d');
+        // $previousDate = (new DateTime($Date))->modify('-1 day')->format('Y-m-d');
+
+        // // Get shift start and end time
+        // $Shift_Sql = "SELECT StartTime, EndTime 
+        //           FROM Shift_Mst 
+        //           WHERE CompCode = '$CompanyCode' 
+        //             AND LocCode = '$LocationCode' 
+        //             AND ShiftDesc = '$Shift'";
+        // $Shift_Data = $this->db->query($Shift_Sql)->row();
+
+
+        // $Shift_Start_Time = $Shift_Data->StartTime ?? '00:00:00';
+        // $Shift_End_Time   = $Shift_Data->EndTime ?? '00:00:00';
+
+        // foreach ($query->result() as $row) {
+
+        //     $Employee_ID = $row->EmpNo;
+        //     $Employee_Name = $row->FirstName;
+        //     $Sub_Department = $row->Sub_Department;
+        //     $Shift_Closing_Time = date('h:i A', strtotime($row->Updated_Time));;
+
+        //     // OUT time range
+        //     if (strtoupper($Next_Shift) === 'SHIFT3') {
+        //         $out_start = "$Date 13:00:00";
+        //         $out_end   = "$nextDate 10:00:00";
+        //     } else {
+        //         $out_start = "$Date 06:00:00";
+        //         $out_end   = "$nextDate 04:00:00";
+        //     }
+
+        //     // Get OUT time
+        //     $Sql_OUT = "SELECT TOP 1 TimeOUT
+        //             FROM LogTime_OUT
+        //             WHERE MachineID = '$Employee_ID'
+        //               AND Compcode = '$CompanyCode'
+        //               AND LocCode = '$LocationCode'
+        //               AND TimeOUT BETWEEN '$out_start' AND '$out_end'
+        //             ORDER BY TimeOUT DESC";
+        //     $out_query = $this->db->query($Sql_OUT);
+
+        //     $OUTTime = '';
+        //     $OUTDateTime = null;
+        //     if ($out_query->num_rows() > 0) {
+        //         $OUTDateTime = new DateTime($out_query->row()->TimeOUT);
+        //         $OUTTime = $OUTDateTime->format('h:i A');
+        //     }
+
+        //     // IN time range
+        //     $in_start = "$Date 02:00:00";
+        //     $in_end   = "$nextDate 02:00:00";
+
+        //     $Sql_IN = "SELECT TOP 1 TimeIN
+        //            FROM LogTime_IN
+        //            WHERE MachineID = '$Employee_ID'
+        //              AND Compcode = '$CompanyCode'
+        //              AND LocCode = '$LocationCode'
+        //              AND TimeIN BETWEEN '$in_start' AND '$in_end'
+        //            ORDER BY TimeIN ASC";
+        //     $in_query = $this->db->query($Sql_IN);
+
+        //     // Fallback for SHIFT3
+        //     if ($in_query->num_rows() === 0 && strtoupper($Next_Shift) === 'SHIFT3') {
+        //         $prev_in_start = "$previousDate 22:00:00";
+        //         $prev_in_end   = "$Date 01:00:00";
+
+        //         $Sql_Pre_IN = "SELECT TOP 1 TimeIN
+        //                    FROM LogTime_IN
+        //                    WHERE MachineID = '$Employee_ID'
+        //                      AND Compcode = '$CompanyCode'
+        //                      AND LocCode = '$LocationCode'
+        //                      AND TimeIN BETWEEN '$prev_in_start' AND '$prev_in_end'
+        //                    ORDER BY TimeIN ASC";
+        //         $prev_in_query = $this->db->query($Sql_Pre_IN);
+        //         if ($prev_in_query->num_rows() > 0) {
+        //             $in_query = $prev_in_query;
+        //         }
+        //     }
+
+        //     $INTime = '';
+        //     $INDateTime = null;
+        //     if ($in_query->num_rows() > 0) {
+        //         $INDateTime = new DateTime($in_query->row()->TimeIN);
+        //         $INTime = $INDateTime->format('h:i A');
+        //     }
+
+        //     // Calculate OT
+        //     $decimalOT = 0.0;
+
+        //     if ($INDateTime && $OUTDateTime) {
+        //         $ShiftStart = new DateTime("$Date $Shift_Start_Time");
+        //         $ShiftEnd = new DateTime("$Date $Shift_End_Time");
+        //         if ($ShiftEnd <= $ShiftStart) $ShiftEnd->modify('+1 day');
+
+        //         $workedMinutes = round(($OUTDateTime->getTimestamp() - $INDateTime->getTimestamp()) / 60, 2);
+        //         $shiftMinutes  = round(($ShiftEnd->getTimestamp() - $ShiftStart->getTimestamp()) / 60, 2);
+
+        //         $otMinutes = max(0, $workedMinutes - $shiftMinutes);
+        //         $otHours   = (int)floor($otMinutes / 60);
+        //         $otRemMin  = round($otMinutes - ($otHours * 60));
+
+        //         // Convert remaining minutes to decimal
+        //         if ($otRemMin >= 11 && $otRemMin <= 20) {
+        //             $minuteDecimal = 0.25;
+        //         } elseif ($otRemMin >= 21 && $otRemMin <= 40) {
+        //             $minuteDecimal = 0.50;
+        //         } elseif ($otRemMin >= 41) {
+        //             $minuteDecimal = 1.0;
+        //         } else {
+        //             $minuteDecimal = 0.0;
+        //         }
+
+        //         $decimalOT = $otHours + $minuteDecimal;
+        //     }
+
+        //     $Date_Check = date('d/m/Y', strtotime($Date));
+
+        //     $Sql_Verify = "SELECT * FROM OTHours WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND TranDate = '$Date_Check'
+        //                AND Update_Status = 'E-Master' AND Status = '0' AND TokenNo = '$Employee_ID'";
+        //     $Query_Verify = $this->db->query($Sql_Verify);
+
+
+        //     if ($Query_Verify->num_rows() > 0) {
+
+        //         $Verify_Result = $Query_Verify->result();
+
+        //         $Sql_Updated = "SELECT OTHrs FROM OTHours WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode' AND TranDate = '$Date_Check'
+        //                AND Update_Status = 'E-Master' AND TokenNo = '$Employee_ID'";
+
+        //         $Query_Updated = $this->db->query($Sql_Updated)->result();
+
+
+        //         $results[] = [
+
+        //             'Date' => date('d/m/Y', strtotime($Date)),
+        //             'Shift' => $Shift,
+        //             'Next_Shift' => $Next_Shift,
+        //             'Employee_ID'  => $Employee_ID,
+        //             'Employee_Name' => $Employee_Name,
+        //             'In_Time' => $INTime,
+        //             'Out_Time' => $OUTTime,
+        //             'E_Master_Closing' => $Shift_Closing_Time,
+        //             'OT_Hour' => $Query_Updated[0]->OTHrs,
+        //             'Updated_Status' => '1'
+
+        //         ];
+        //     } else {
+
+        //         $results[] = [
+
+        //             'Date' => date('d/m/Y', strtotime($Date)),
+        //             'Shift' => $Shift,
+        //             'Next_Shift' => $Next_Shift,
+        //             'Employee_ID'  => $Employee_ID,
+        //             'Employee_Name' => $Employee_Name,
+        //             'In_Time' => $INTime,
+        //             'Out_Time' => $OUTTime,
+        //             'E_Master_Closing' => $Shift_Closing_Time,
+        //             'OT_Hour' => number_format($decimalOT, 2),
+        //             'Updated_Status' => '0'
+
+        //         ];
+        //     }
+        // }
+
+        // return $results;
+
+
+
+
+        $Next_Shift = ($Shift === 'SHIFT1') ? 'SHIFT2' : (($Shift === 'SHIFT2') ? 'SHIFT3' : 'SHIFT1');
+
+    $sql = "SELECT Work.EmpNo, Work.FirstName, Work.Sub_Department, Work.Updated_Time, Work.Closing_Status
             FROM Web_Employee_Work_Allocation_Mst AS Work
             INNER JOIN UserDetails_Det AS Login
                 ON Login.Lcode = Work.Lcode
                 AND Login.Name = Work.Sub_Department
-            WHERE
-                Login.Ccode = '$CompanyCode'
-                AND Login.Lcode = '$LocationCode'
-                AND Login.UserID = '$Login_User'
-                AND Work.Date = '$Date'
-                AND Work.Shift = '$Shift'
-                AND Work.Work_Status = '1'
-                AND Work.Assign_Status = '1'
-                AND Work.Working_Type = 'OT'";
+            WHERE Login.Ccode = '$CompanyCode'
+              AND Login.Lcode = '$LocationCode'
+              AND Login.UserID = '$Login_User'
+              AND Work.Date = '$Date'
+              AND Work.Shift = '$Shift'
+              AND Work.Work_Status = '1'";
 
-        $Query = $this->db->query($Sql);
+    $query = $this->db->query($sql);
+    if ($query->num_rows() === 0) return [];
 
-        if ($Query->num_rows() > 0) {
-            $Details = $Query->result();
-            $Data = [];
+    $results = [];
+    $employees = $query->result();
 
-            $Sql_Shift = "SELECT * FROM Shift_Mst WHERE CompCode = '$CompanyCode' AND LocCode = '$LocationCode' AND ShiftDesc = '$Shift'";
-            $Shift_Data = $this->db->query($Sql_Shift)->row();
+    $employeeIDs = array_map(function($e) { return "'{$e->EmpNo}'"; }, $employees);
 
-            $serial = 1;
+    $nextDate = (new DateTime($Date))->modify('+1 day')->format('Y-m-d');
+    $previousDate = (new DateTime($Date))->modify('-1 day')->format('Y-m-d');
 
-            foreach ($Details as $Detail) {
-                $Employee_ID = $Detail->EmpNo;
-                $Shift_Date_Convert = $Date;
+    $Shift_Sql = "SELECT StartTime, EndTime 
+                  FROM Shift_Mst 
+                  WHERE CompCode = '$CompanyCode' 
+                    AND LocCode = '$LocationCode' 
+                    AND ShiftDesc = '$Shift'";
+    $Shift_Data = $this->db->query($Shift_Sql)->row();
+    $Shift_Start_Time = $Shift_Data->StartTime ?? '00:00:00';
+    $Shift_End_Time   = $Shift_Data->EndTime ?? '00:00:00';
 
-                // ✅ Safely handle Updated_Time
-                $Partial_Close_Time = $Detail->Updated_Time;
-                if (!empty($Partial_Close_Time) && $Partial_Close_Time !== '-') {
-                    try {
-                        $time = new DateTime($Partial_Close_Time);
-                        $Partial_Close_Time_Final = $time->format('H:i');
-                    } catch (Exception $e) {
-                        $Partial_Close_Time_Final = '';
-                    }
-                } else {
-                    $Partial_Close_Time_Final = '';
-                }
+    // OUT time range
+    $out_start = (strtoupper($Next_Shift) === 'SHIFT3') ? "$Date 13:00:00" : "$Date 06:00:00";
+    $out_end   = (strtoupper($Next_Shift) === 'SHIFT3') ? "$nextDate 10:00:00" : "$nextDate 04:00:00";
 
-                if ($Shift_Data) {
-                    $Shift_Date_Conversion = ($Shift_Data->StartIN_Days == 1 && $Shift_Data->EndIN_Days == 1)
-                        ? date('Y-m-d', strtotime($Shift_Date_Convert . ' +1 days'))
-                        : $Shift_Date_Convert;
-                } else {
-                    $Shift_Date_Conversion = $Shift_Date_Convert;
-                }
+    $Sql_OUT_All = "SELECT MachineID, MAX(TimeOUT) as TimeOUT
+                    FROM LogTime_OUT
+                    WHERE MachineID IN (" . implode(',', $employeeIDs) . ")
+                      AND Compcode = '$CompanyCode'
+                      AND LocCode = '$LocationCode'
+                      AND TimeOUT BETWEEN '$out_start' AND '$out_end'
+                    GROUP BY MachineID";
+    $OUT_Log = $this->db->query($Sql_OUT_All)->result();
+    $OUT_Map = [];
+    foreach ($OUT_Log as $row) {
+        $OUT_Map[$row->MachineID] = new DateTime($row->TimeOUT);
+    }
 
-                $Sql_Punch_IN = "SELECT FORMAT(MIN(TimeIN), 'HH:mm') AS TimeIN
-                             FROM LogTime_IN
-                             WHERE CompCode = '$CompanyCode'
-                               AND LocCode = '$LocationCode'
-                               AND MachineID = '$Employee_ID'
-                               AND CAST(TimeIN AS DATE) = '$Shift_Date_Conversion'";
+    // IN time range
+    $in_start = "$Date 02:00:00";
+    $in_end   = "$nextDate 02:00:00";
 
-                $Sql_Punch_OUT = "SELECT FORMAT(MAX(TimeOUT), 'HH:mm') AS TimeOUT
-                              FROM LogTime_OUT
-                              WHERE CompCode = '$CompanyCode'
-                                AND LocCode = '$LocationCode'
-                                AND MachineID = '$Employee_ID'
-                                AND CAST(TimeOUT AS DATE) = '$Shift_Date_Conversion'";
+    $Sql_IN_All = "SELECT MachineID, MIN(TimeIN) as TimeIN
+                   FROM LogTime_IN
+                   WHERE MachineID IN (" . implode(',', $employeeIDs) . ")
+                     AND Compcode = '$CompanyCode'
+                     AND LocCode = '$LocationCode'
+                     AND TimeIN BETWEEN '$in_start' AND '$in_end'
+                   GROUP BY MachineID";
+    $IN_Log = $this->db->query($Sql_IN_All)->result();
+    $IN_Map = [];
+    foreach ($IN_Log as $row) {
+        $IN_Map[$row->MachineID] = new DateTime($row->TimeIN);
+    }
 
-                $PunchIn = $this->db->query($Sql_Punch_IN)->row();
-                $PunchOut = $this->db->query($Sql_Punch_OUT)->row();
+    // Backup IN for SHIFT3
+    if (strtoupper($Next_Shift) === 'SHIFT3') {
+        $prev_in_start = "$previousDate 22:00:00";
+        $prev_in_end   = "$Date 01:00:00";
 
-                $TimeIN = $PunchIn && $PunchIn->TimeIN ? $PunchIn->TimeIN : '';
-                $TimeOUT = $PunchOut && $PunchOut->TimeOUT ? $PunchOut->TimeOUT : '';
-
-                $WorkingHours = '0';
-                $TotalWorkingFormatted = '';
-                if ($TimeIN && $TimeOUT) {
-                    $in = new DateTime($TimeIN);
-                    $out = new DateTime($TimeOUT);
-                    if ($out < $in) {
-                        $out->modify('+1 day');
-                    }
-                    $diff = $in->diff($out);
-                    $minutes = $diff->h * 60 + $diff->i;
-                    $WorkingHours = ($diff->i >= 30) ? $diff->h + 1 : $diff->h;
-                    $TotalWorkingFormatted = sprintf('%d:%02d', $diff->h, $diff->i);
-                }
-
-                $UpdatedTime = (!empty($Partial_Close_Time) && $Partial_Close_Time !== '-') ? substr($Partial_Close_Time, 11, 5) : '';
-                $Difference = '';
-                $Difference_Status = 3;
-
-                if ($UpdatedTime && $TimeOUT) {
-                    try {
-                        $updated = new DateTime($UpdatedTime);
-                        $last = new DateTime($TimeOUT);
-                        $interval = $updated->diff($last);
-                        $totalMin = abs($interval->h * 60 + $interval->i);
-                        $hours = floor($totalMin / 60);
-                        $mins = $totalMin % 60;
-                        $Difference = sprintf('%02d:%02d', $hours, $mins);
-                        $Difference_Status = ($totalMin >= 45) ? 1 : 0;
-                    } catch (Exception $e) {
-                        $Difference = '';
-                        $Difference_Status = 3;
-                    }
-                }
-
-                $ClosingStatus = ($Detail->Closing_Status == '1') ? 'Closed' : 'Not Closed';
-                $Verify = $WorkingHours;
-
-                $Shift_Array = ['SHIFT1', 'SHIFT2', 'SHIFT3'];
-
-                $currentIndex = array_search($Shift, $Shift_Array);
-                $previousIndex = ($currentIndex - 1 + count($Shift_Array)) % count($Shift_Array);
-                $Previous_Shift = $Shift_Array[$previousIndex];
-
-                $Data[] = [
-                    'Date'              => $Date,
-                    'Previous Shift'    => $Previous_Shift,
-                    'Current Shift'     => $Shift,
-                    'Employee Id'       => $serial,
-                    'EmpNo'             => $Detail->EmpNo,
-                    'Employee Name'     => $Detail->FirstName,
-                    'Status'            => $ClosingStatus,
-                    'IN Time'           => $TimeIN,
-                    'IN OUT'            => $TimeOUT,
-                    'Updated_Time'      => $Partial_Close_Time_Final,
-                    'W.Hours'           => $WorkingHours,
-                    'Diffrence'         => $Difference,
-                    'Diffrence_Status'  => $Difference_Status,
-                    'Verify'            => $Verify
-                ];
-
-                $serial++;
+        $Sql_Pre_IN = "SELECT MachineID, MIN(TimeIN) as TimeIN
+                       FROM LogTime_IN
+                       WHERE MachineID IN (" . implode(',', $employeeIDs) . ")
+                         AND Compcode = '$CompanyCode'
+                         AND LocCode = '$LocationCode'
+                         AND TimeIN BETWEEN '$prev_in_start' AND '$prev_in_end'
+                       GROUP BY MachineID";
+        $Prev_IN_Log = $this->db->query($Sql_Pre_IN)->result();
+        foreach ($Prev_IN_Log as $row) {
+            if (!isset($IN_Map[$row->MachineID])) {
+                $IN_Map[$row->MachineID] = new DateTime($row->TimeIN);
             }
-
-            return $Data;
-        } else {
-            return 0;
         }
     }
+
+    // OT Verification
+    $Date_Check = date('d/m/Y', strtotime($Date));
+    $Sql_Verify_All = "SELECT TokenNo, OTHrs FROM OTHours
+                       WHERE Ccode = '$CompanyCode' AND Lcode = '$LocationCode'
+                         AND TranDate = '$Date_Check' AND Update_Status = 'E-Master' AND Status = '0'
+                         AND TokenNo IN (" . implode(',', $employeeIDs) . ")";
+    $Verify_Log = $this->db->query($Sql_Verify_All)->result();
+    $Verify_Map = [];
+    foreach ($Verify_Log as $row) {
+        $Verify_Map[$row->TokenNo] = $row->OTHrs;
+    }
+
+    foreach ($employees as $row) {
+        $Employee_ID = $row->EmpNo;
+        $Employee_Name = $row->FirstName;
+        $Shift_Closing_Time_Str = $row->Updated_Time;
+        $Shift_Closing_Status = $row->Closing_Status;
+
+        $Shift_Closing_Time = '';
+        if (!empty($Shift_Closing_Time_Str) && $Shift_Closing_Time_Str !== '-' && strtotime($Shift_Closing_Time_Str) !== false) {
+            $Shift_Closing_Time = date('h:i A', strtotime($Shift_Closing_Time_Str));
+        }
+
+        $INDateTime = $IN_Map[$Employee_ID] ?? null;
+        $OUTDateTime = $OUT_Map[$Employee_ID] ?? null;
+
+        $INTime = $INDateTime ? $INDateTime->format('h:i A') : '';
+        $OUTTime = $OUTDateTime ? $OUTDateTime->format('h:i A') : '';
+
+        $Total_Working_Hours = 0.00;
+        $workingMinutes = 0.0;
+        if ($INDateTime && $OUTDateTime) {
+            $workingMinutes = ($OUTDateTime->getTimestamp() - $INDateTime->getTimestamp()) / 60.0;
+            $Total_Working_Hours = round($workingMinutes / 60.0, 2);
+        }
+
+        $OT_Closing_Diff = 0;
+        if ($OUTDateTime && !empty($Shift_Closing_Time_Str) && strtotime($Shift_Closing_Time_Str) !== false) {
+            try {
+                $ShiftClosingDateTime = new DateTime($Shift_Closing_Time_Str);
+                $diffMinutes = abs(($OUTDateTime->getTimestamp() - $ShiftClosingDateTime->getTimestamp()) / 60.0);
+                $OT_Closing_Diff = ($diffMinutes > 45) ? 1 : 0;
+            } catch (Exception $e) {
+                $OT_Closing_Diff = 0;
+            }
+        }
+
+        $decimalOT = 0.00;
+        if ($INDateTime && $OUTDateTime) {
+            $ShiftStart = new DateTime("$Date $Shift_Start_Time");
+            $ShiftEnd = new DateTime("$Date $Shift_End_Time");
+            if ($ShiftEnd <= $ShiftStart) $ShiftEnd->modify('+1 day');
+
+            $shiftMinutes = ($ShiftEnd->getTimestamp() - $ShiftStart->getTimestamp()) / 60.0;
+            $otMinutes = max(0, $workingMinutes - $shiftMinutes);
+
+            $otHours = floor($otMinutes / 60.0);
+            $otRemMin = $otMinutes - ($otHours * 60.0);
+
+            if ($otRemMin >= 11 && $otRemMin <= 20) {
+                $minuteDecimal = 0.25;
+            } elseif ($otRemMin >= 21 && $otRemMin <= 40) {
+                $minuteDecimal = 0.50;
+            } elseif ($otRemMin >= 41) {
+                $minuteDecimal = 1.0;
+            } else {
+                $minuteDecimal = 0.0;
+            }
+
+            $decimalOT = round($otHours + $minuteDecimal, 2);
+        }
+
+        $results[] = [
+            'Date' => $Date_Check,
+            'Employee_ID' => $Employee_ID,
+            'Employee_Name' => $Employee_Name,
+            'In_Time' => $INTime,
+            'Out_Time' => $OUTTime,
+            'E_Master_Closing' => $Shift_Closing_Time,
+            'OT_Hour' => isset($Verify_Map[$Employee_ID]) ? $Verify_Map[$Employee_ID] : number_format($decimalOT, 2),
+            'Total_Working_Hours' => number_format($Total_Working_Hours, 2),
+            'OT_Closing_Diff' => $OT_Closing_Diff,
+            'Closing_Status' => $Shift_Closing_Status,
+            'Updated_Status' => isset($Verify_Map[$Employee_ID]) ? '1' : '0'
+        ];
+    }
+
+    return $results;
+    
+    }
+
+        public function Get_OT_Employee_List($CompanyCode, $LocationCode, $Login_User,$Date, $Shift)
+{
+    $Sql = "SELECT * FROM Web_Employee_Work_Allocation_Mst Work
+            INNER JOIN UserDetails_Det Login ON Login.Lcode = Work.Lcode
+                AND Login.Ccode = Work.Ccode
+                AND Login.Name = Work.Sub_Department
+            WHERE Login.UserID = '$Login_User'
+                AND Work.Lcode = '$LocationCode'
+                AND Work.Ccode = '$CompanyCode'
+                AND Work.Date = '$Date'
+                AND Work.Shift = '$Shift'
+                AND Work.WorK_Status = '1'
+                AND Work.Working_Type = 'OT'
+                AND Work.Work_Type != 'NoWork'";
+                // print_r($Sql);exit;
+    $Query = $this->db->query($Sql);
+
+    if ($Query->num_rows() > 0) {
+        return $Query->result();
+    } else {
+        return 0;
+    }
+}
 }

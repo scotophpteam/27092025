@@ -20,31 +20,31 @@ $(document).ready(function () {
     var currentDate = new Date().toISOString().split("T")[0];
     $("#Date").val(currentDate);
     $("#Date").attr("max", currentDate);
-    
-    	$("#Reports_For_Allocation").hide();
 
-		$("#Work_Allocation_List_Container").hide();
-		$("#Work_Allocation_Report_Down_Btn").hide();
+    $("#Reports_For_Allocation").hide();
+
+    $("#Work_Allocation_List_Container").hide();
+    $("#Work_Allocation_Report_Down_Btn").hide();
 
     $.ajax({
-		url: baseurl + "Shift_Closing/Shifts",
-		type: "POST",
-		success: function (response) {
-			var responseData = JSON.parse(response);
-			var Shifts = responseData.Shifts;
-			var Shift = {'' : ''};
+        url: baseurl + "Shift_Closing/Shifts",
+        type: "POST",
+        success: function (response) {
+            var responseData = JSON.parse(response);
+            var Shifts = responseData.Shifts;
+            var Shift = { '': '' };
 
-			for (var i = 0; i < Shifts.length; i++) {
-				var DName = Shifts[i];
-				Shift[DName.ShiftDesc] = DName.ShiftDesc;
-			}
+            for (var i = 0; i < Shifts.length; i++) {
+                var DName = Shifts[i];
+                Shift[DName.ShiftDesc] = DName.ShiftDesc;
+            }
 
-			$.each(Shift, function (index, value) {
-				$("#Shift").append($("<option></option>").attr("value", value).text(value));
+            $.each(Shift, function (index, value) {
+                $("#Shift").append($("<option></option>").attr("value", value).text(value));
             });
 
 
-		}
+        }
     })
 
 
@@ -209,15 +209,15 @@ $(document).ready(function () {
                 var Response_Data = JSON.parse(response);
 
                 if (Response_Data.file_url) {
-					var link = document.createElement("a");
-					link.href = Response_Data.file_url;
-                    link.download = "Daily_Sap_Machine_Details" + "_" + currentDate + "." + "csv";
-					document.body.appendChild(link);
-					link.click();
-					document.body.removeChild(link);
-				} else {
-					alert("Failed to generate the report");
-				}
+                    var link = document.createElement("a");
+                    link.href = Response_Data.file_url;
+                    link.download = "Daily_Sap_Machine_Details" + "_" + currentDate + "." + "xlsx";
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } else {
+                    alert("Failed to generate the report");
+                }
 
             }
         })

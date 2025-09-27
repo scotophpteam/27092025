@@ -98,19 +98,22 @@
 
             <div class="pd-5 card-box mb-30">
                 <div class="pd-5">
-                    <h4 class="text-black h5 text-center">Employee Work Partial Closing</h4>
+                    <h4 class="text-black h5 text-center">Employee Punching Detail Report</h4>
                 </div>
 
                 <form method="POST" enctype="multipart/form-data">
+
+                    <input type="hidden" id="Employee_Punching_List_Details_Screen" value="Employee_Punching_List_Details_Screen">
+
                     <div class="row py-2">
-                        <div class="col-md-2">
+                        <div class="col-md-3">
                             <div class="form-group">
                                 <label>Date</label>
                                 <input type="Date" class="form-control" id="Date" name="Date">
                             </div>
                         </div>
 
-                        <div class="col-md-2">
+                        <div class="col-md-3">
                             <div class="form-group">
                                 <label>Shift</label>
                                 <select class="custom-select2 form-control" name="Shift" id="Shift">
@@ -120,33 +123,20 @@
                             </div>
 
                         </div>
-
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label>Employee Division</label>
-                                <select class="custom-select2 form-control" name="Sub_Section" id="Sub_Section">
-                                    <span class="text-danger"><?php echo form_error('Sub_Section'); ?></span>
-                                </select>
+                        <div class="col-md-2">
+                            <div class="form-group d-flex align-items-center gap-3">
+                                <button type="button" class="btn btn-success btn-sm d-flex align-items-center gap-2"
+                                    name="Employee_Punching_List_View"
+                                    id="Employee_Punching_List_View" style="margin-top: 34px;">View</button>&nbsp;
+                                <button type="button" class="btn btn-warning btn-sm"
+                                    id="Employee_Punching_List_Down_Btn" style="display: none; margin-top: 34px;">Download</button>
                             </div>
                         </div>
-
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label>Supervisor Name</label>
-                                <select class="custom-select2 form-control" name="Supervisor_Name" id="Supervisor_Name">
-                                    <span class="text-danger"><?php echo form_error('Supervisor_Name'); ?></span>
-                                </select>
-                            </div>
-                        </div>
-
-
-
                     </div>
                 </form>
 
 
                 <div class="min-height-200px">
-
                     <div id="preloader" style="display: none; text-align: center; padding: 10px;">
                         <img src="https://i.gifer.com/ZKZg.gif" alt="Loading..." width="60">
 
@@ -154,32 +144,37 @@
 
 
 
-                    <div id="Partial_Closing_Table_Section">
+                    <div id="Employee_Punching_List_Table_Section" style="display:none;">
                         <div class="pd-20">
-                            <h4 class="text-black h5 text-center">Employee Allocation List</h4>
+                            <h4 class="text-black h5 text-center">Employee Punching Details</h4>
                         </div>
 
-                        <div class="container-fluid mt-3 table-container" id="Allocation_Details_Color_Details">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle" id="Partial_Closing_Table">
-                                    <thead class="table-success">
-                                        <tr>
-                                            <th>S.No</th>
-                                            <th>Position</th>
-                                            <th>Employee Id</th>
-                                            <th>Employee Name</th>
-                                            <!-- <th>Status</th> -->
-                                            <th>Description</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <!-- Data rows go here -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                        <div class="table-container" id="Allocation_Details_Color_Details">
 
+                            <button class="button btn-sm btn-success" id="Completed_Punching_List">Punching complete</button>
+                            <button class="button btn-sm btn-danger" id="Missed_Punching_List">Missed Punching</button>
+                            <button class="button btn-sm" id="Manual_Attendance_List" style="background-color: orange; color: white;">Manual Attendance</button>
+
+
+                            <table class="table table-responsive" id="Employee_Punching_List_Table">
+                                <thead>
+                                    <tr>
+                                        <th>S.No</th>
+                                        <th>Employee Id</th>
+                                        <th>Employee Name</th>
+                                        <th>Postion</th>
+                                        <th>Day In</th>
+                                        <th>Break Out</th>
+                                        <th>Break IN</th>
+                                        <th>Day Out</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -226,4 +221,4 @@
 
 
             <!-- Include the script for handling work allocation -->
-            <script src="<?php echo base_url('assets/Script/Partial_Close.js') ?>"></script>
+            <script src="<?php echo base_url('assets/Script/Employee.js') ?>"></script>
